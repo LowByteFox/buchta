@@ -1,9 +1,10 @@
-import { Buchta } from "./buchta";
+import { Basket, Buchta } from "./buchta";
 
 const app = new Buchta();
+app.enableDebug(true);
 
-app.get("/", () => {
-    return "<h1>Hello, world</h1>";
+app.get("/", (_req, query: Basket) => {
+    return JSON.stringify(Object.fromEntries(query));
 });
 
 app.get("/react/", () => {

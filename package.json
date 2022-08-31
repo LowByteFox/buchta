@@ -1,7 +1,7 @@
 {
   "name": "buchta",
   "description": "Minimalistic yet powerful http library for Bun",
-  "version": "0.0.3",
+  "version": "0.1.0",
   "contributors": [
     "Ján Gajdoš <gajdos.jan77@gmail.com>"
   ],
@@ -27,6 +27,6 @@
   },
   "dependencies": {
     "@types/marked": "^4.0.6",
-    "marked": "^4.0.19"
+    "marked": "^4.1.0"
   }
 }

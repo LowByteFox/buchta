@@ -1,7 +1,7 @@
 # Buchta
 ## Minimalistic yet powerful http library for Bun
 
-![Buchta logo](./buchta.png "Buhcta Logo")
+![Buchta logo](https://raw.githubusercontent.com/Fire-The-Fox/buchta/develop/buchta.png "Buhcta Logo")
 
 ## Get Started
 ```bash
@@ -15,18 +15,13 @@ in `buchta.config.json` it's recommended for you to set `webRootPath` and `cache
 
 ## Example 
 ```ts
-import { Basket, Buchta } from "./buchta";
+import { Buchta } from "./buchta";
 
 const app = new Buchta();
-app.enableDebug(true);
 
-app.get("/", (_req, query: Basket) => {
-    return JSON.stringify(Object.fromEntries(query));
+app.get("/", () => {
+    return "<h1>Hello, world</h1>";
 });
-
-app.get("/react/", () => {
-    return app.loadFile("./react/react.html");
-})
 
 app.run();
 ```
