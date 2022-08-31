@@ -1,0 +1,9 @@
+{
+    "webRootPath"   : "./web",
+    "cacheRootPath" : "./.cache",
+    "imports": {
+        "react": "https://cdn.skypack.dev/react",
+        "react-dom": "https://cdn.skypack.dev/react-dom",
+        "framer-motion": "https://cdn.skypack.dev/framer-motion@6.0"
+    }
+}

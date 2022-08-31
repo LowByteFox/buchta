@@ -1,0 +1,32 @@
+{
+  "name": "buchta",
+  "description": "Minimalistic yet powerful http library for Bun",
+  "version": "0.0.3",
+  "contributors": [
+    "Ján Gajdoš <gajdos.jan77@gmail.com>"
+  ],
+  "license": "ISC",
+  "keywords": [
+    "buchta",
+    "library",
+    "web",
+    "http",
+    "rest",
+    "router",
+    "app",
+    "api",
+    "jsx",
+    "markdown"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Fire-The-Fox/buchta.git"
+  },
+  "devDependencies": {
+    "bun-types": "^0.1.8"
+  },
+  "dependencies": {
+    "@types/marked": "^4.0.6",
+    "marked": "^4.0.19"
+  }
+}
