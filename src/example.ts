@@ -6,4 +6,8 @@ app.get("/", () => {
     return "<h1>Hello, world</h1>";
 });
 
+app.get("/react/", () => {
+    return app.loadFile("./react/react.html");
+})
+
 app.run();

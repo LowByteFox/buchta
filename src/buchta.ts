@@ -93,10 +93,17 @@ export class Buchta {
         const dirs = rootBase.split("/");
         dirs.shift();
         dirs.pop();
-        let baseDir = `${this.cacheRootPath}${extra}`;
+
+        let baseDir = this.cacheRootPath;
         if (!await fileExist(baseDir)) {
             await mkdir(baseDir);
         }
+
+        baseDir += extra;
+        if (!await fileExist(baseDir)) {
+            await mkdir(baseDir);
+        }
+
         for (const dir of dirs) {
             baseDir += `${dir}/`;
             if (!await fileExist(baseDir)) {
