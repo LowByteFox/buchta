@@ -42,6 +42,7 @@ export class Buchta {
         this.knownFiles.set("pjp", "image/jpeg");
         this.knownFiles.set("svg", "image/svg+xml");
         this.knownFiles.set("webp", "image/webp");
+        this.knownFiles.set("ico", "image/x-icon");
         this.redirect = false;
         
         try {
