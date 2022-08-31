@@ -33,5 +33,5 @@ app.run();
 
 ## Updates
 `Buchta` now has own logger<br>
-Now it's possible to handle queries `/?Name=Jan&Age=17`<br>
+Now it's possible to handle queries `/?Name=Jan&Age=17` => `{ "Name": "Jan", "Age": "17" }`<br>
 added `Buchta.enableDebug`, after you enable it, `Buchta` won't cache files and will transpile them over and over until you are done.
