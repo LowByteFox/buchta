@@ -11,11 +11,15 @@ bun run src/example.ts
 ```
 
 Buchta should always be run where `buchta.config.json` is<br>
-in `buchta.config.json` it's recommended for you to set `webRootPath` and `cacheRootPath` as absolute path
+in `buchta.config.json` it's recommended to set `webRootPath` and `cacheRootPath` as an absolute path
+
+### ⚠️ For people downloading buchta through `bun add buchta`
+After you have downloaded buchta from npm, copy `buchta.config.json` from `node_modules/buchta/`
+
 
 ## Example 
 ```ts
-import { Basket, Buchta } from "./buchta";
+import { Basket, Buchta } from "buchta";
 
 const app = new Buchta();
 app.enableDebug(true);
@@ -31,8 +35,6 @@ app.get("/react/", () => {
 app.run();
 ```
 
-## Updates
-`Buchta` now has own logger<br>
-Now it's possible to handle queries `/?Name=Jan&Age=17` => `{ "Name": "Jan", "Age": "17" }`<br>
-added `Buchta.enableDebug`, after you enable it, `Buchta` won't cache files and will transpile them over and over until you are done<br>
-It's possible to return JSON string and that will be loaded as json on the web
+### Updates
+Added few file types for audio and video<br>
+Implemented  `Internet Explorer stopper`

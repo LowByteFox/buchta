@@ -24,6 +24,7 @@ export class Buchta {
     private config: Config;
     private logger: BuchtaLogger;
     private debug: boolean;
+    private stopIE: boolean;
 
     public get: (route: string, func: (req?: Request, query?: Basket) => {}) => {};
     public post: (route: string, func: (req?: Request, query?: Basket) => {}) => {};
@@ -53,6 +54,13 @@ export class Buchta {
         this.knownFiles.set("svg", "image/svg+xml");
         this.knownFiles.set("webp", "image/webp");
         this.knownFiles.set("ico", "image/x-icon");
+        this.knownFiles.set("mp4", "video/mp4");
+        this.knownFiles.set("webm", "video/webm");
+        this.knownFiles.set("mov", "video/mov");
+        this.knownFiles.set("mp3", "audio/mp3");
+        this.knownFiles.set("flac", "audio/flac");
+        this.knownFiles.set("ogg", "audio/ogg");
+        this.knownFiles.set("wav", "audio/wav");
         this.redirect = false;
         this.debug = false;
         
@@ -78,6 +86,7 @@ export class Buchta {
 
         this.config.webRootPath ? this.setWebRoot(this.config.webRootPath) : this.setWebRoot("./");
         this.config.cacheRootPath ? this.setCacheRoot(this.config.cacheRootPath) : this.setCacheRoot("./.cache/");
+        this.blockInternetExplorer(true);
 
         for (const method of ["GET", "POST", "PATCH", "DELETE", "PUT"]) {
             this[method.toLowerCase()] = (route: string, func: Function) => {
@@ -107,6 +116,11 @@ export class Buchta {
     enableDebug = (enabled: boolean) => {
         enabled ? this.logger.warning("Debug mode enabled, nothing will be cached") : this.logger.info("Disabling Debug mode");
         this.debug = enabled;
+    }
+
+    blockInternetExplorer = (enabled: boolean) => {
+        enabled ? this.logger.info("Now Internet Explorer users won't have access. They should know that IE is deprecated") : this.logger.info("If you app supports IE, then everything is good");
+        this.stopIE = enabled;
     }
 
     loadByteFile = (fileName: string) => {
@@ -261,7 +275,8 @@ export class Buchta {
     }
 
     loadByMIME = async (base: string, fName: string) => {
-        if (this.knownFiles.get(fName)?.includes("image")) {
+        const temp = this.knownFiles.get(fName);
+        if (temp?.includes("image") || temp?.includes("audio") || temp?.includes("video")) {
             return new Response(await this.loadByteFile(base));
         } else {
             return this.safeFileLoader(base);
@@ -272,12 +287,20 @@ export class Buchta {
         Bun.serve({
             async fetch(req: Request) : Promise<Response> {
                 let res: Response;
+
+                if (server.stopIE) {
+                    if (req.headers.get("user-agent")?.includes("Trident")) {
+                        return new Response("This website doesn't support Internet Explorer. Switch to more modern browser than that you have right now",
+                        {headers: {"content-type": "text/html"}});
+                    }
+                }
+
                 const url = new URL(req.url);
                 const base = url.pathname;
                 const query = new Map<string, string>();
                 url.searchParams.forEach((value: string, key: string) => {
                     if (!query.has(key)) query.set(key, value);
-                })
+                });
                 const fName = base.split(".").pop();
                 if (server.routes.get(req.method)?.has(base)) {
                     server.logger.info(`Loading content of ${base}`)

@@ -11,4 +11,4 @@ function App() {
 }
 
 // render is only required when you are importing current file in html
-render(<App />, document.getElementById("root"));
+render(<App />, document.body);
