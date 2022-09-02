@@ -36,5 +36,5 @@ app.run();
 ```
 
 ### Updates
-Implemented Experimental `BuchtaRouter` which should parse routes same as expressjs
+Implemented Experimental `BuchtaRouter` which should parse routes same as expressjs<br>
 Buchta now not only replaces import modules in just jsx and tsx but also js and ts, look at jquery example
