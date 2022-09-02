@@ -3,6 +3,7 @@
     "cacheRootPath" : "./.cache",
     "imports": {
         "react": "https://cdn.skypack.dev/react",
-        "react-dom": "https://cdn.skypack.dev/react-dom"
+        "react-dom": "https://cdn.skypack.dev/react-dom",
+        "jQuery": "https://cdn.skypack.dev/jquery"
     }
 }

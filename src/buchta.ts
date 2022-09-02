@@ -4,6 +4,7 @@ import { fileExist } from "./buchta-utils";
 import { marked } from "marked";
 import { BuchtaLogger } from "./buchta-logger";
 import { exit } from "node:process";
+import { BuchtaRouter } from "./buchta-router";
 
 interface Config {
     webRootPath: string;
@@ -11,10 +12,9 @@ interface Config {
     imports: Map<string, string>;
 }
 
-export type Basket = Map<String, String>;
-
 export class Buchta {
     private routes: Map<string, Map<string, Function>>;
+    private experimentalRoutes: Array<String>;
     private knownFiles: Map<string, string>;
     private _404Page: Function;
     private redirect: boolean;
@@ -25,17 +25,20 @@ export class Buchta {
     private logger: BuchtaLogger;
     private debug: boolean;
     private stopIE: boolean;
+    private router: BuchtaRouter;
 
-    public get: (route: string, func: (req?: Request, query?: Basket) => {}) => {};
-    public post: (route: string, func: (req?: Request, query?: Basket) => {}) => {};
-    public patch: (route: string, func: (req?: Request, query?: Basket) => {}) => {};
-    public delete: (route: string, func: (req?: Request, query?: Basket) => {}) => {};
-    public put: (route: string, func: (req?: Request, query?: Basket) => {}) => {};
+    public get: (route: string, func: (req?: Request) => {}, experimental?: boolean) => {};
+    public post: (route: string, func: (req?: Request) => {}, experimental?: boolean) => {};
+    public patch: (route: string, func: (req?: Request) => {}, experimental?: boolean) => {};
+    public delete: (route: string, func: (req?: Request) => {}, experimental?: boolean) => {};
+    public put: (route: string, func: (req?: Request) => {}, experimental?: boolean) => {};
     
     constructor(configPath?: string) {
         this.routes = new Map<string, Map<string, Function>>();
+        this.experimentalRoutes = new Array<string>();
         this.knownFiles = new Map<string, string>();
         this.logger = new BuchtaLogger();
+        this.router = new BuchtaRouter();
 
         this.logger.info("Buchta went to oven and met Bun. Both of them started talking about HTTP");
 
@@ -61,6 +64,7 @@ export class Buchta {
         this.knownFiles.set("flac", "audio/flac");
         this.knownFiles.set("ogg", "audio/ogg");
         this.knownFiles.set("wav", "audio/wav");
+        this.knownFiles.set("wasm", "application/wasm");
         this.redirect = false;
         this.debug = false;
         
@@ -89,17 +93,22 @@ export class Buchta {
         this.blockInternetExplorer(true);
 
         for (const method of ["GET", "POST", "PATCH", "DELETE", "PUT"]) {
-            this[method.toLowerCase()] = (route: string, func: Function) => {
+            this[method.toLowerCase()] = (route: string, func: Function, experimental=false) => {
                   const map = this.routes.get(method) || new Map<string, Function>();
                   this.logger.info(`Registering route '${route}' with method ${method}`);
                   map.set(route, func);
                   this.routes.set(method, map);
+                  if (experimental) {
+                    this.logger.warning(`Route '${route}' has been set as EXPERIMENTAL, this route will use new BuchtaRouter. This feature is yet unfinished, be careful.`);
+                    this.logger.warning("BuchtaRouter can parse routes similar to https://expressjs.com/en/guide/routing.html");
+                    this.experimentalRoutes.push(route);
+                  }
             }
         }
     }
     
     loadFile = (fileName: string, cache = false) => {
-        fileName = fileName.replace("//", "/");
+        fileName = fileName.replaceAll("//", "/");
         this.logger.info(`Loading file ${fileName}${cache ? " from cache" : ""}`);
         return cache ? readFile(`${this.cacheRootPath}${fileName}`, {encoding:'utf8', flag:'r'}) : readFile(`${this.webRootPath}${fileName}`, {encoding:'utf8', flag:'r'});
     }
@@ -124,7 +133,7 @@ export class Buchta {
     }
 
     loadByteFile = (fileName: string) => {
-        fileName = fileName.replace("//", "/");
+        fileName = fileName.replaceAll("//", "/");
         this.logger.info(`Loading byte file ${fileName}`);
         return readFile(`${this.webRootPath}${fileName}`);
     }
@@ -140,7 +149,7 @@ export class Buchta {
         if (this.webRootPath[path.length-1] != '/') {
             this.webRootPath += "/"
         }
-        this.webRootPath = this.webRootPath.replace("//", "/");
+        this.webRootPath = this.webRootPath.replaceAll("//", "/");
     }
 
     setCacheRoot = (path: string) => {
@@ -149,7 +158,7 @@ export class Buchta {
         if (this.cacheRootPath[path.length-1] != '/') {
             this.cacheRootPath += "/"
         }
-        this.cacheRootPath = this.cacheRootPath.replace("//", "/");
+        this.cacheRootPath = this.cacheRootPath.replaceAll("//", "/");
     }
 
     redirectTo = (url: string) => {
@@ -212,7 +221,11 @@ export class Buchta {
             res =  new Response(await this.loadFile(`${base.replace(".ts", ".js")}`, true));
         } else {
             const transpiler = new Bun.Transpiler({ loader: "ts" });
-            const transpiled = await transpiler.transform(await this.loadFile(base));
+            let transpiled = await transpiler.transform(await this.loadFile(base));
+            const splited = transpiled.split("\n");
+            if (splited[splited.length-1] == "") splited.pop();
+            this.patchImports(splited);
+            transpiled = splited.join("\n");
             res =  new Response(transpiled);
             if (!this.debug) {
                 await this.recursiveCacheCreate(base);
@@ -224,7 +237,7 @@ export class Buchta {
         return res;
     }
 
-    patchReact = async (splited: string[]) => {
+    patchImports = async (splited: string[]) => {
         for (let i = 0; i < splited.length; i++) {
             if (splited[i].startsWith("import") || splited[i].includes("require")) {
                 let tempLine;
@@ -259,8 +272,8 @@ export class Buchta {
                 return new Response(e);
             }
             const splited = transpiled.split("\n");
-            splited.pop();
-            this.patchReact(splited);
+            if (splited[splited.length-1] == "") splited.pop();
+            this.patchImports(splited);
             transpiled = splited.join("\n");
             transpiled += `\nfunction jsx(name, data, _g1, _g2, _g3, _g4) { return createElement(name, data); }`
             res =  new Response(transpiled);
@@ -276,18 +289,42 @@ export class Buchta {
 
     loadByMIME = async (base: string, fName: string) => {
         const temp = this.knownFiles.get(fName);
-        if (temp?.includes("image") || temp?.includes("audio") || temp?.includes("video")) {
+        if (temp?.includes("image") || temp?.includes("audio") || temp?.includes("video") || temp?.includes("wasm")) {
             return new Response(await this.loadByteFile(base));
         } else {
-            return this.safeFileLoader(base);
+            if (fName == "js") {
+                const data = await this.loadFile(base);
+                const splited = data.split("\n");
+                if (splited[splited.length-1] == "") splited.pop();
+                this.patchImports(splited);
+                return new Response(splited.join("\n"));
+            } else {
+                return this.safeFileLoader(base);
+            }
         }
+    }
+
+    loadRoute = async (req: Request) => {
+        let res: Response;
+        req["query"] = this.router.query;
+        this.logger.info(`Loading content of ${this.router.base}`);
+        const str = await this.routes.get(req.method).get(this.router.base)(req);
+        try {
+            res = new Response(JSON.stringify(JSON.parse(str)));
+            res.headers.append("content-type", "application/json");
+        } catch(e) {
+            this.logger.warning("This page is probably not a json, loading normally");
+            res = new Response(str);
+            res.headers.append("content-type", "text/html; charset=UTF-8");
+        }
+                    
+        return res;
     }
 
     run = (serverPort: number = 3000, func?: Function, server=this) => {
         Bun.serve({
             async fetch(req: Request) : Promise<Response> {
                 let res: Response;
-
                 if (server.stopIE) {
                     if (req.headers.get("user-agent")?.includes("Trident")) {
                         return new Response("This website doesn't support Internet Explorer. Switch to more modern browser than that you have right now",
@@ -295,26 +332,31 @@ export class Buchta {
                     }
                 }
 
-                const url = new URL(req.url);
-                const base = url.pathname;
-                const query = new Map<string, string>();
-                url.searchParams.forEach((value: string, key: string) => {
-                    if (!query.has(key)) query.set(key, value);
-                });
-                const fName = base.split(".").pop();
-                if (server.routes.get(req.method)?.has(base)) {
-                    server.logger.info(`Loading content of ${base}`)
-                    const str = await server.routes.get(req.method).get(base)(req, query);
-                    try {
-                        res = new Response(JSON.stringify(JSON.parse(str)));
-                        res.headers.append("content-type", "application/json");
-                    } catch(e) {
-                        server.logger.warning("This page is probably not a json, loading normally");
-                        res = new Response(str);
-                        res.headers.append("content-type", "text/html; charset=UTF-8");
+                server.router.parseURLbase(req.url);
+                const base = server.router.base;
+                const fName = server.router.fileName;
+
+                for (const element of server.experimentalRoutes) {
+                    if (element.slice(0, element.lastIndexOf('/')) == base.slice(0, base.lastIndexOf('/'))) { 
+                        server.router.parseRoute(element.toString(), base);
+                        req["query"] = server.router.query;
+                        req["params"] = server.router.params;
+                        const str = await server.routes.get(req.method).get(element.toString())(req);
+                        try {
+                            res = new Response(JSON.stringify(JSON.parse(str)));
+                            res.headers.append("content-type", "application/json");
+                        } catch(e) {
+                            server.logger.warning("This page is probably not a json, loading normally");
+                            res = new Response(str);
+                            res.headers.append("content-type", "text/html; charset=UTF-8");
+                        }
+                                    
+                        return res;
                     }
-                    
-                    return res;
+                }
+
+                if (server.routes.get(req.method)?.has(server.router.base)) {
+                    return server.loadRoute(req);
                 } else {
                     if (base.includes(".") && fName != "ts" && fName != "md" && fName != "jsx" && fName != "tsx" || server.knownFiles.has(fName)) {
                         res = await server.loadByMIME(base, fName);

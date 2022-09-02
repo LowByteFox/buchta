@@ -1,7 +1,8 @@
 {
   "name": "buchta",
   "description": "Minimalistic yet powerful http library for Bun",
-  "version": "0.1.0",
+  "module": "src/buchta.ts",
+  "version": "0.1.5",
   "contributors": [
     "Ján Gajdoš <gajdos.jan77@gmail.com>"
   ],

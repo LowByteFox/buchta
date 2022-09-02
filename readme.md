@@ -36,5 +36,5 @@ app.run();
 ```
 
 ### Updates
-Added few file types for audio and video<br>
-Implemented  `Internet Explorer stopper`
+Implemented Experimental `BuchtaRouter` which should parse routes same as expressjs
+Buchta now not only replaces import modules in just jsx and tsx but also js and ts, look at jquery example
