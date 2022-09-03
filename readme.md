@@ -19,22 +19,41 @@ After you have downloaded buchta from npm, copy `buchta.config.json` from `node_
 
 ## Example 
 ```ts
-import { Basket, Buchta } from "buchta";
+import { Buchta } from "buchta";
 
 const app = new Buchta();
-app.enableDebug(true);
+app.justShut(true);   // makes it quiet
+app.enableDebug(true);  // transpiled files won't go to cache
+app.setMarkdownCSS(await app.loadFile("/markdown/markdown.css"));
+app.setReactCSS(await app.loadFile("/react/react.css"));
 
-app.get("/", (_req, query: Basket) => {
-    return JSON.stringify(Object.fromEntries(query));
+app.get("/", (req) => {
+    return JSON.stringify(Object.fromEntries(req["query"]));
 });
 
-app.get("/react/", () => {
-    return app.loadFile("./react/react.html");
-})
+app.get("/re*act/", () => {
+    return app.reactSinglePage("/react/index.jsx");
+});
+
+app.get("/asm/", () => {
+    return app.loadFile("./asm/index.html");
+});
+
+app.get("/jquery/:data", () => {
+    return app.loadFile("./jquery/index.html");
+});
+
+app.get("/markdown/", () => {
+    return app.markdownSinglePage("/markdown/page.md");
+});
 
 app.run();
 ```
 
-### Updates
-Implemented Experimental `BuchtaRouter` which should parse routes same as expressjs<br>
-Buchta now not only replaces import modules in just jsx and tsx but also js and ts, look at jquery example
+## Updates
+Every route now uses new routing system, similar to express.js<br>
+When dealing with react, html is not needed<br>
+Same thing applies to markdown<br>
+To make `Buchta` quiet, call `justShut` method with value `true`<br>
+Both markdown and react pages which doesn't have html part, can also have css injected<br>
+`BuchtaRouter` is supported even in webbrowser, but you need to modify some stuff

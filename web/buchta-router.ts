@@ -1,6 +1,3 @@
-import { exit } from "process";
-import { BuchtaLogger } from "./buchta-logger";
-
 export class BuchtaRouter {
     private regexp = /(\/)[^:](.*?)(?=\/)/g;
     result: boolean;
@@ -9,7 +6,6 @@ export class BuchtaRouter {
     base: string;
     query: Map<string, string>;
     fileName: string;
-    logger: BuchtaLogger;
 
     constructor() {
         this.params = new Map<string, string>();
@@ -53,10 +49,6 @@ export class BuchtaRouter {
 
     parseRoute = (template: string, path: string) => {
         this.params.clear();
-        if (template.startsWith("/:")) {
-            this.logger?.error(`${template} This is expressjs bottleneck. Remove routes starting with /:`);
-            exit(1);
-        }
         if (template == path) {
             this.result = true;
             return;

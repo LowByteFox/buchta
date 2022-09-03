@@ -14,11 +14,8 @@ interface Config {
 
 export class Buchta {
     private routes: Map<string, Map<string, Function>>;
-    private experimentalRoutes: Array<String>;
     private knownFiles: Map<string, string>;
     private _404Page: Function;
-    private redirect: boolean;
-    private redirectDest: string;
     private webRootPath: string;
     private cacheRootPath: string;
     private config: Config;
@@ -26,6 +23,8 @@ export class Buchta {
     private debug: boolean;
     private stopIE: boolean;
     private router: BuchtaRouter;
+    private markdownCSS: string;
+    private reactCSS: string;
 
     public get: (route: string, func: (req?: Request) => {}, experimental?: boolean) => {};
     public post: (route: string, func: (req?: Request) => {}, experimental?: boolean) => {};
@@ -35,10 +34,10 @@ export class Buchta {
     
     constructor(configPath?: string) {
         this.routes = new Map<string, Map<string, Function>>();
-        this.experimentalRoutes = new Array<string>();
         this.knownFiles = new Map<string, string>();
         this.logger = new BuchtaLogger();
         this.router = new BuchtaRouter();
+        this.router.logger = this.logger;
 
         this.logger.info("Buchta went to oven and met Bun. Both of them started talking about HTTP");
 
@@ -65,7 +64,6 @@ export class Buchta {
         this.knownFiles.set("ogg", "audio/ogg");
         this.knownFiles.set("wav", "audio/wav");
         this.knownFiles.set("wasm", "application/wasm");
-        this.redirect = false;
         this.debug = false;
         
         try {
@@ -93,16 +91,11 @@ export class Buchta {
         this.blockInternetExplorer(true);
 
         for (const method of ["GET", "POST", "PATCH", "DELETE", "PUT"]) {
-            this[method.toLowerCase()] = (route: string, func: Function, experimental=false) => {
-                  const map = this.routes.get(method) || new Map<string, Function>();
-                  this.logger.info(`Registering route '${route}' with method ${method}`);
-                  map.set(route, func);
-                  this.routes.set(method, map);
-                  if (experimental) {
-                    this.logger.warning(`Route '${route}' has been set as EXPERIMENTAL, this route will use new BuchtaRouter. This feature is yet unfinished, be careful.`);
-                    this.logger.warning("BuchtaRouter can parse routes similar to https://expressjs.com/en/guide/routing.html");
-                    this.experimentalRoutes.push(route);
-                  }
+            this[method.toLowerCase()] = (route: string, func: Function) => {
+                const map = this.routes.get(method) || new Map<string, Function>();
+                this.logger.info(`Registering route '${route}' with method ${method}`);
+                map.set(route, func);
+                this.routes.set(method, map);
             }
         }
     }
@@ -152,6 +145,11 @@ export class Buchta {
         this.webRootPath = this.webRootPath.replaceAll("//", "/");
     }
 
+    justShut = (val: boolean) => this.logger.shut = val;
+
+    setMarkdownCSS = (data: string) => this.markdownCSS = data;
+    setReactCSS = (data: string) => this.reactCSS = data;
+
     setCacheRoot = (path: string) => {
         this.logger.info(`Setting 'cacheRootPath' to ${path}`);
         this.cacheRootPath = path;
@@ -159,12 +157,6 @@ export class Buchta {
             this.cacheRootPath += "/"
         }
         this.cacheRootPath = this.cacheRootPath.replaceAll("//", "/");
-    }
-
-    redirectTo = (url: string) => {
-        this.logger.info(`Redirecting user to ${url}`);
-        this.redirect = true;
-        this.redirectDest = url;
     }
 
     recursiveCacheCreate = async (rootBase: string, extra="") => {
@@ -193,9 +185,9 @@ export class Buchta {
 
     handleMarkdown = async (base: string) => {
         this.logger.info("Transpiling markdown to html");
-        let res: Response;
+        let res: string;
         if(await fileExist(`${this.cacheRootPath}`) && await fileExist(`${this.cacheRootPath}${base.replace(".md", ".html")}`)) {
-            res =  new Response(await this.loadFile(`${base.replace(".md", ".html")}`, true));
+            res = await this.loadFile(`${base.replace(".md", ".html")}`, true);
         } else {
             let transpiled: string;
             try {
@@ -203,15 +195,22 @@ export class Buchta {
             } catch(e) {
                 this.logger.warning(e);
             }
-            res =  new Response(transpiled);
+            res = transpiled;
             if (!this.debug) {
                 await this.recursiveCacheCreate(base);
                 await writeFile(`${this.cacheRootPath}${base.replace(".md", ".html")}`, transpiled, {encoding:'utf8', flag: 'w'});
             }
         }
-        res.headers.append("content-type", "text/html; charset=UTF-8");
         this.logger.success("Markdown transpiled to html");
         return res;
+    }
+
+    markdownSinglePage = async (fileName: string) => {
+        let data = await this.handleMarkdown(fileName);
+        if (this.markdownCSS) {
+            data += `\n<style>${this.markdownCSS}</style>`;
+        }
+        return data;
     }
 
     handleTypescript = async (base: string) => {
@@ -259,9 +258,9 @@ export class Buchta {
 
     handleReact = async (base: string) => {
         this.logger.info("Handling react");
-        let res: Response;
+        let res: string;
         if(await fileExist(`${this.cacheRootPath}react/`) && await fileExist(`${this.cacheRootPath}react/${base.replace(".tsx", ".js").replace(".jsx", ".js")}`)) {
-            res =  new Response(await this.loadFile(`react/${base.replace(".tsx", ".js").replace(".jsx", ".js")}`, true));
+            res = await this.loadFile(`react/${base.replace(".tsx", ".js").replace(".jsx", ".js")}`, true);
         } else {
             const transpiler = new Bun.Transpiler({ loader: "jsx" });
             let transpiled: string;
@@ -269,22 +268,44 @@ export class Buchta {
                 transpiled = await transpiler.transform(await this.loadFile(base));
             } catch (e) {
                 this.logger.warning(e);
-                return new Response(e);
+                return e.toString();
             }
             const splited = transpiled.split("\n");
             if (splited[splited.length-1] == "") splited.pop();
             this.patchImports(splited);
             transpiled = splited.join("\n");
             transpiled += `\nfunction jsx(name, data, _g1, _g2, _g3, _g4) { return createElement(name, data); }`
-            res =  new Response(transpiled);
+            res = transpiled;
             if (!this.debug) {
                 await this.recursiveCacheCreate(base, "react/");
                 await writeFile(`${this.cacheRootPath}react/${base.replace(".tsx", ".js").replace(".jsx", ".js")}`, transpiled, {encoding:'utf8', flag: 'w'});
             }
         }
-        res.headers.append("content-type", "text/javascript");
         this.logger.success("React.js handled");
         return res;
+    }
+
+    reactSinglePage = async (fileName: string) => {
+        let data = `
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<title></title>
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>`;
+        if (this.reactCSS) {
+            data += `\n<style>\n${this.reactCSS}\n</style>\n`;
+        }
+        data += `
+<body>
+</body>
+<script type="module">\n`;
+        data += await this.handleReact(fileName);
+        data += "\n</script>";
+
+        data += "</html>";
+        return data;
     }
 
     loadByMIME = async (base: string, fName: string) => {
@@ -304,11 +325,14 @@ export class Buchta {
         }
     }
 
-    loadRoute = async (req: Request) => {
+    loadRoute = async (req: Request, routeName: string, addParams=false) => {
         let res: Response;
         req["query"] = this.router.query;
+        if (addParams) {
+            req["params"] = this.router.params;
+        }
         this.logger.info(`Loading content of ${this.router.base}`);
-        const str = await this.routes.get(req.method).get(this.router.base)(req);
+        const str = await this.routes.get(req.method).get(routeName)(req);
         try {
             res = new Response(JSON.stringify(JSON.parse(str)));
             res.headers.append("content-type", "application/json");
@@ -327,58 +351,40 @@ export class Buchta {
                 let res: Response;
                 if (server.stopIE) {
                     if (req.headers.get("user-agent")?.includes("Trident")) {
-                        return new Response("This website doesn't support Internet Explorer. Switch to more modern browser than that you have right now",
-                        {headers: {"content-type": "text/html"}});
+                        return new Response("This website doesn't support Internet Explorer. Switch to more modern browser than that you have right now");
                     }
                 }
 
                 server.router.parseURLbase(req.url);
-                const base = server.router.base;
-                const fName = server.router.fileName;
+                let base = server.router.base;
+                let fName = server.router.fileName;
 
-                for (const element of server.experimentalRoutes) {
-                    if (element.slice(0, element.lastIndexOf('/')) == base.slice(0, base.lastIndexOf('/'))) { 
-                        server.router.parseRoute(element.toString(), base);
-                        req["query"] = server.router.query;
-                        req["params"] = server.router.params;
-                        const str = await server.routes.get(req.method).get(element.toString())(req);
-                        try {
-                            res = new Response(JSON.stringify(JSON.parse(str)));
-                            res.headers.append("content-type", "application/json");
-                        } catch(e) {
-                            server.logger.warning("This page is probably not a json, loading normally");
-                            res = new Response(str);
-                            res.headers.append("content-type", "text/html; charset=UTF-8");
-                        }
-                                    
-                        return res;
+                if (base.includes(".") && fName != "ts" && fName != "md" && fName != "jsx" && fName != "tsx" || server.knownFiles.has(fName)) {
+                    res = await server.loadByMIME(base, fName);
+                    res.headers.append("content-type", server.knownFiles.has(fName) ? server.knownFiles.get(fName) : "text/plain");
+                    return res;
+                } else if (fName == "ts") {
+                    return server.handleTypescript(base);
+                } else if (fName == "md") {
+                    return new Response(await server.handleMarkdown(base), {headers: {"content-type": "text/html; charset=UTF-8"}});
+                } else if (fName == "jsx" || fName == "tsx") {
+                    return new Response(await server.handleReact(base), {headers: {"content-type": "text/javascript"}});
+                }
+
+                for (const element of server.routes.get(req.method)) {
+                    server.router.parseRoute(element[0], base);
+                    if (server.router.result) {
+                        return server.loadRoute(req, element[0], true);
                     }
                 }
 
                 if (server.routes.get(req.method)?.has(server.router.base)) {
-                    return server.loadRoute(req);
-                } else {
-                    if (base.includes(".") && fName != "ts" && fName != "md" && fName != "jsx" && fName != "tsx" || server.knownFiles.has(fName)) {
-                        res = await server.loadByMIME(base, fName);
-                        res.headers.append("content-type", server.knownFiles.has(fName) ? server.knownFiles.get(fName) : "text/plain");
-                        return res;
-                    } else if (fName == "ts") {
-                        return server.handleTypescript(base);
-                    } else if (fName == "md") {
-                        return server.handleMarkdown(base);
-                    } else if (fName == "jsx" || fName == "tsx") {
-                        return server.handleReact(base);
-                    } else {
-                        res = await server.safeFileLoader(base);
-                        res.headers.append("content-type", `text/plain`);
-                    }
+                    return server.loadRoute(req, server.router.base);
                 }
+
                 res = server._404Page ? new Response(server._404Page(req)) : new Response("404 sad bun");
                 res.headers.append("content-type", "text/html; charset=UTF-8");
-                if (server.redirect) {
-                    server.redirect = false;
-                    return Response.redirect(server.redirectDest);
-                } else return res;
+                return res;
             },
             port: serverPort
         });

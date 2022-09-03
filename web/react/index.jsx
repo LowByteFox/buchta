@@ -1,6 +1,6 @@
 import { createElement } from "react"; // bun add react
 import { render } from "react-dom"; // bun add react-dom
-import { HelloWorld } from "./HelloWorld.jsx"; // file extension is required, Buchta is still a little stupid
+import { HelloWorld } from "/react/HelloWorld.jsx"; // file extension is required, Buchta is still a little stupid
 
 function App() {
     return (
