@@ -4,6 +4,9 @@
     "imports": {
         "react": "https://cdn.skypack.dev/react",
         "react-dom": "https://cdn.skypack.dev/react-dom",
-        "jQuery": "https://cdn.skypack.dev/jquery"
+        "jQuery": "https://cdn.skypack.dev/jquery",
+        "svelte": "https://cdn.skypack.dev/svelte@latest",
+        "svelte/internal": "https://cdn.skypack.dev/svelte@latest/internal",
+        "svelte/motion": "https://cdn.skypack.dev/svelte@latest/motion"
     }
 }

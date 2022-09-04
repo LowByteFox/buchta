@@ -47,13 +47,13 @@ app.get("/markdown/", () => {
     return app.markdownSinglePage("/markdown/page.md");
 });
 
+app.get("/svelte/", () => {
+    return app.loadFile("/svelte/index.html");
+});
+
 app.run();
 ```
 
 ## Updates
-Every route now uses new routing system, similar to express.js<br>
-When dealing with react, html is not needed<br>
-Same thing applies to markdown<br>
-To make `Buchta` quiet, call `justShut` method with value `true`<br>
-Both markdown and react pages which doesn't have html part, can also have css injected<br>
-`BuchtaRouter` is supported even in webbrowser, but you need to modify some stuff
+Say hello to `Svelte`. To get started with svelte run `bun run svelte-init`<br>
+To run example server run `bun run example`

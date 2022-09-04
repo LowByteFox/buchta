@@ -6,6 +6,13 @@ import { BuchtaLogger } from "./buchta-logger";
 import { exit } from "node:process";
 import { BuchtaRouter } from "./buchta-router";
 
+let svelteC: NodeRequire;
+try {
+    svelteC = require('svelte/compiler');
+} catch {
+
+}
+
 interface Config {
     webRootPath: string;
     cacheRootPath: string;
@@ -238,11 +245,11 @@ export class Buchta {
 
     patchImports = async (splited: string[]) => {
         for (let i = 0; i < splited.length; i++) {
-            if (splited[i].startsWith("import") || splited[i].includes("require")) {
+            if (splited[i].startsWith("import") || splited[i].includes("require") || splited[i].includes("from")) {
                 let tempLine;
-                if (splited[i].includes('\'')) {
-                    tempLine = splited[i].slice(splited[i].indexOf('\''), splited[i].length);
-                    tempLine = tempLine.slice(0, tempLine.indexOf('\''));
+                if (splited[i].includes("'")) {
+                    tempLine = splited[i].slice(splited[i].indexOf("'")+1, splited[i].length);
+                    tempLine = tempLine.slice(0, tempLine.indexOf("'"));
                 } else if (splited[i].includes('"')) {
                     tempLine = splited[i].slice(splited[i].indexOf('"')+1, splited[i].length);
                     tempLine = tempLine.slice(0, tempLine.indexOf('"'));
@@ -308,6 +315,45 @@ export class Buchta {
         return data;
     }
 
+    handleSvelte = async (base: string) => {
+        this.logger.info("Handling svelte");
+        if (!svelteC) {
+            this.logger.warning("Svelte is not installed, install svelte using `bun add svelte` or `bun run svelte-init`");
+            return "";
+        }
+        let res: string;
+        if(await fileExist(`${this.cacheRootPath}svelte/`) && await fileExist(`${this.cacheRootPath}svelte/${base.replace(".svelte", ".js")}`)) {
+            res = await this.loadFile(`svelte/${base.replace(".svelte", ".js")}`, true);
+        } else {
+            let transpiled: string;
+            const name = base.split("/").pop().split(".").shift();
+            try {
+                transpiled = svelteC["compile"](await this.loadFile(base), {
+                    generate: "dom",
+                    css: true,
+                    name: name
+                }).js.code;
+            } catch (e) {
+                this.logger.warning(e);
+                return e.toString();
+            }
+            const splited = transpiled.split("\n");
+            if (splited[splited.length-1] == "") splited.pop();
+            this.patchImports(splited);
+            transpiled = splited.join("\n");
+            if (name == "App") {
+                transpiled += `\nconst app = new App({target: document.body});`
+            }
+            res = transpiled;
+            if (!this.debug) {
+                await this.recursiveCacheCreate(base, "svelte/");
+                await writeFile(`${this.cacheRootPath}svelte/${base.replace(".svelte", ".js")}`, transpiled, {encoding:'utf8', flag: 'w'});
+            }
+        }
+        this.logger.success("Svelte handled");
+        return res;
+    }
+
     loadByMIME = async (base: string, fName: string) => {
         const temp = this.knownFiles.get(fName);
         if (temp?.includes("image") || temp?.includes("audio") || temp?.includes("video") || temp?.includes("wasm")) {
@@ -359,7 +405,7 @@ export class Buchta {
                 let base = server.router.base;
                 let fName = server.router.fileName;
 
-                if (base.includes(".") && fName != "ts" && fName != "md" && fName != "jsx" && fName != "tsx" || server.knownFiles.has(fName)) {
+                if (base.includes(".") && fName != "ts" && fName != "md" && fName != "jsx" && fName != "tsx" && fName != "svelte" || server.knownFiles.has(fName)) {
                     res = await server.loadByMIME(base, fName);
                     res.headers.append("content-type", server.knownFiles.has(fName) ? server.knownFiles.get(fName) : "text/plain");
                     return res;
@@ -369,6 +415,8 @@ export class Buchta {
                     return new Response(await server.handleMarkdown(base), {headers: {"content-type": "text/html; charset=UTF-8"}});
                 } else if (fName == "jsx" || fName == "tsx") {
                     return new Response(await server.handleReact(base), {headers: {"content-type": "text/javascript"}});
+                } else if (fName == "svelte") {
+                    return new Response(await server.handleSvelte(base), {headers: {"content-type": "text/javascript"}});
                 }
 
                 for (const element of server.routes.get(req.method)) {

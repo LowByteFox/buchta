@@ -2,7 +2,7 @@ import { Buchta } from "./buchta";
 
 const app = new Buchta();
 app.justShut(true);
-app.enableDebug(true);
+app.enableDebug(false);
 app.setMarkdownCSS(await app.loadFile("/markdown/markdown.css"));
 app.setReactCSS(await app.loadFile("/react/react.css"));
 
@@ -24,6 +24,10 @@ app.get("/jquery/:data", () => {
 
 app.get("/markdown/", () => {
     return app.markdownSinglePage("/markdown/page.md");
+});
+
+app.get("/svelte/", () => {
+    return app.loadFile("/svelte/index.html");
 });
 
 app.run();
