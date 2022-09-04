@@ -2,7 +2,7 @@
   "name": "buchta",
   "description": "Minimalistic yet powerful http library for Bun",
   "module": "src/buchta.ts",
-  "version": "0.1.7",
+  "version": "0.2.0",
   "contributors": [
     "Ján Gajdoš <gajdos.jan77@gmail.com>"
   ],
@@ -17,17 +17,26 @@
     "app",
     "api",
     "jsx",
-    "markdown"
+    "markdown",
+    "svelte"
   ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Fire-The-Fox/buchta.git"
+  },
+  "scripts": {
+    "svelte-init": "bun add svelte",
+    "react-init": "bun add react react-dom",
+    "preact-init": "bun add preact",
+    "example": "bun run src/example.ts"
   },
   "devDependencies": {
     "bun-types": "^0.1.8"
   },
   "dependencies": {
     "@types/marked": "^4.0.6",
-    "marked": "^4.1.0"
+    "@types/node": "^18.7.14",
+    "marked": "^4.1.0",
+    "svelte": "^3.50.0"
   }
 }
