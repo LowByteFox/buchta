@@ -1,59 +1,57 @@
 # Buchta
-## Minimalistic yet powerful http library for Bun
+## Powerful http framework for Bun
 
-![Buchta logo](./buchta.png "Buhcta Logo")
+![Buchta logo](./buchta.png "Buchta Logo")
 
 ## Get Started
+
+* `buchta` executable needs nodejs to be installed
+* if you won't select anything as starting framework, fix buchta.config.json so the json will be valid 
 ```bash
-bun create Fire-The-Fox/buchta <project-name>
+bun create Fire-The-Fox/buchta-template <project-name>
 cd <project-name>
-bun run src/example.ts
+bun run buchta init # create base for project
+bun run buchta serve # starts buchta minimal server
 ```
 
-Buchta should always be run where `buchta.config.json` is<br>
-in `buchta.config.json` it's recommended to set `webRootPath` and `cacheRootPath` as an absolute path
+# Changes
+Welcome **Vue** <br>
+100% Of Buchta code was rewritten <br>
+Improved BuchtaRouter code, performance is good <br>
+Implemented automatic routing <br>
+Buchta has it's own executable `buchta` <br>
+Improved cache <br>
+Now Requests are wrapped by `BuchtaRequest` and Responses by `BuchtaResponse` <br>
+<br>
 
-### ⚠️ For people downloading buchta through `bun add buchta`
-After you have downloaded buchta from npm, copy `buchta.config.json` from `node_modules/buchta/`
+# Removed/Unused
+`BuchtaLogger` won't be used for some time<br>
+Routes now doesn't support regex <br>
+<br>
 
-
-## Example 
+## Example
 ```ts
 import { Buchta } from "buchta";
 
+// Buchta will create routes, just empty folder where are your app files ( default is public )
 const app = new Buchta();
-app.justShut(true);   // makes it quiet
-app.enableDebug(true);  // transpiled files won't go to cache
-app.setMarkdownCSS(await app.loadFile("/markdown/markdown.css"));
-app.setReactCSS(await app.loadFile("/react/react.css"));
 
-app.get("/", (req) => {
-    return JSON.stringify(Object.fromEntries(req["query"]));
+app.get("/", (_req, res) => {
+    res.send("hi");
 });
 
-app.get("/re*act/", () => {
-    return app.reactSinglePage("/react/index.jsx");
-});
+app.get("/id/:id/", (req, res) => {
+    res.send(`${req.params.get("id")} ${req.query.get("name")}`);
+})
 
-app.get("/asm/", () => {
-    return app.loadFile("./asm/index.html");
-});
-
-app.get("/jquery/:data", () => {
-    return app.loadFile("./jquery/index.html");
-});
-
-app.get("/markdown/", () => {
-    return app.markdownSinglePage("/markdown/page.md");
-});
-
-app.get("/svelte/", () => {
-    return app.loadFile("/svelte/index.html");
+app.post("/json/", async (req, res) => {
+    // In Bun 0.1.12 and 0.1.13 is issue with `.json()` and `.text()`
+    res.send(JSON.stringify(await req.originalReq.json()));
 });
 
 app.run();
 ```
-
-## Updates
-Say hello to `Svelte`. To get started with svelte run `bun run svelte-init`<br>
-To run example server run `bun run example`
+To run it
+```bash
+bun run <file>
+```
