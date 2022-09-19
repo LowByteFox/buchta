@@ -2,7 +2,7 @@
   "name": "buchta",
   "description": "Powerful http framework for Bun",
   "module": "src/buchta.ts",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "contributors": [
     "Ján Gajdoš <gajdos.jan77@gmail.com>"
   ],
