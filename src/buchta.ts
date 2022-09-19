@@ -62,6 +62,7 @@ export class Buchta {
                     exit(1);
                 }
             } else {
+                console.log("buchta.config.json doesn't exist or it's broken");
                 exit(1);
             }
         }

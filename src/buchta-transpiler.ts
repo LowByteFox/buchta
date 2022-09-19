@@ -112,7 +112,7 @@ const vueHtmlTemplate = (code: string) => {
 
     getFile(url) {
         if ( url === './App.vue' )
-          return Promise.resolve(\`${code}\`);
+          return Promise.resolve(\`${code.replaceAll("\/", "\\/")}\`);
 
         return fetch(url).then(response => response.ok ? response.text() : Promise.reject(response));
     },
