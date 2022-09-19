@@ -34,6 +34,7 @@ export class BuchtaCache {
     }
 
     handleCache = (fileName: string, code: string, outputExt: string) => {
+        if (process.env.DEBUG) return null;
         const newFilePath = fileName.replace(new RegExp(`.${fileName.split(".").pop()}$`), "." + outputExt);
         this.recursiveCacheCreate(newFilePath);
         if (code != null) {

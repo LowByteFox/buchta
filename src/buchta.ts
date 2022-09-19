@@ -167,7 +167,7 @@ export class Buchta {
             res.send(await this.transpiler.transpileJsx(await readFile(this.config.webRootPath + filePath, {encoding: "utf-8"}), filePath));
         } else if (filePath.endsWith("ts")) {
             const cacheData = this.cacheHandler.handleCache(filePath, null, "js");
-            if (cacheData) {
+            if (cacheData) { 
                 res.send(cacheData);
                 return;
             }

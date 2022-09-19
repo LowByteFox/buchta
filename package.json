@@ -2,7 +2,7 @@
   "name": "buchta",
   "description": "Powerful http framework for Bun",
   "module": "src/buchta.ts",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "contributors": [
     "Ján Gajdoš <gajdos.jan77@gmail.com>"
   ],
@@ -31,7 +31,7 @@
   ],
   "devDependencies": {
     "@types/node": "^18.7.14",
-    "bun-types": "^0.1.11",
+    "bun-types": "^0.1.11"
   },
   "dependencies": {
     "prompts": "^2.4.2"
