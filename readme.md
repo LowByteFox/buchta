@@ -14,6 +14,8 @@ bun run buchta init # create base for project
 bun run buchta serve # starts buchta minimal server
 ```
 
+* If you don't want buchta to cache, set DEBUG env to true ( DEBUG=true bun run buchta serve )
+
 # Changes
 Welcome **Vue** <br>
 100% Of Buchta code was rewritten <br>
