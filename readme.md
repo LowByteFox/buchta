@@ -17,7 +17,7 @@ bun run buchta serve # starts buchta minimal server
 * If you don't want buchta to cache, set DEBUG env to true ( DEBUG=true bun run buchta serve )
 
 # Changes
-Welcome **Vue** <br>
+Welcome **Vue** ( partial support ) <br>
 100% Of Buchta code was rewritten <br>
 Improved BuchtaRouter code, performance is good <br>
 Implemented automatic routing <br>
