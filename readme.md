@@ -1,5 +1,5 @@
 # Buchta
-## Powerful http framework for Bun
+## Huro.js framework
 
 <img src="buchta.png" alt="Buchta Logo" width="256"/>
 
