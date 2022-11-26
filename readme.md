@@ -14,7 +14,7 @@ Buchta is under renovation, sorry<br>
 
 Returning simple 'hi': <br>
 v3: 59k req/s<br>
-v4: 106k reqs<br>
+v4: 106k req/s<br>
 <br>
 Parsing params and query: <br>
 v3: 49k req/s<br>
