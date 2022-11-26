@@ -1,7 +1,7 @@
 # Buchta
 ## Powerful http framework for Bun
 
-![Buchta logo](./buchta.png "Buchta Logo")
+![Buchta logo](./buchta_old.png "Buchta Logo")
 
 ## Get Started
 
