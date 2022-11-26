@@ -1,7 +1,7 @@
 # Buchta
 ## Powerful http framework for Bun
 
-![Buchta logo](./buchta.png "Buchta Logo")
+<img src="buchta.png" alt="Buchta Logo" width="256"/>
 
 ## Get Started
 
