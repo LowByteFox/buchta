@@ -1,7 +1,7 @@
 import { BuchtaRequest } from './request';
 import { BuchtaResponse } from './response';
 
-export type route = (path: string, callback: (req: BuchtaRequest, res: BuchtaResponse) => void) => route;
+export type route = (path: string, callback: (req: BuchtaRequest, res: BuchtaResponse) => void, ...data) => void;
 
 export class Router {
     routes: Map<string, (req: BuchtaRequest, res: BuchtaResponse) => void> = new Map();
@@ -17,7 +17,7 @@ export class Router {
         let methods = ["get", "post", "put", "delete"];
         for (let method of methods) {
             this[method] = (path: string, handler: (req: BuchtaRequest, res: BuchtaResponse) => void) => {
-                let regex = `${method}/${path}`;
+                let regex = `${method}/${this.healRoute(path)}`;
                 path.split("/").forEach((part, i) => {
                     if (part.startsWith(":")) {
                         const map = this.preParams.get(regex) || new Map();
@@ -38,20 +38,23 @@ export class Router {
     }
 
     handle(path: string, method: string): (req: BuchtaRequest, res: BuchtaResponse) => void {
-        path = this.healRoute(path);
+        path = `${method}/${this.healRoute(path)}`;
         for (const [route, handler] of this.routes) {
             const routeParts = route.split("/");
-            const pathParts = `${method}/${path}`.split("/");
+            const pathParts = path.split("/");
             if (routeParts.length != pathParts.length) {
                 continue;
             }
-            const map = this.preParams.get(route);
-            if (!map) return handler;
-            this.params.clear();
-            for (const [key, val] of map) {
-                this.params.set(key, pathParts[val + 1]);
+            if (path.match(route.replace(/:[^\s/]+/g, ".+"))) {
+                const map = this.preParams.get(route);
+                if (!map) return handler;
+                this.params.clear();
+                for (const [key, val] of map) {
+                    this.params.set(key, pathParts[val + 1]);
+                }
+                return handler;
             }
-            return handler;
         }
+        return null;
     }
 }

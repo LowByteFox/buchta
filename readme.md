@@ -27,5 +27,12 @@ v4: 72k req/s<br>
 ## BuchtaRequest
 BuchtaRequest is gone, `request` is casual `Request` with `params` and `query` added to it
 
+## FS Routing
+every `js` or `ts` file that folows this syntax `get.server.js`, `post.server.ts` will be executed on the server <br>
+For more info, look into `public` folder
+
+## Plugin support
+Here we go, the fun part and most interesting part is here, Plugin API is still not finished, for now there is swagger plugin made as example
+
 ## Something else?
 Yes, many things are still being implemented so until that, I won't update npm package

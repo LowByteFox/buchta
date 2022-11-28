@@ -7,15 +7,13 @@ export class BuchtaResponse {
     private statusText: string;
     private body: string | Uint8Array;
     private filePath: string;
-    private webRoot: string;
 
-    constructor(webRootPath: string) {
+    constructor() {
         this.statusCode = 200;
         this.headers = new Headers();
         this.statusText = "";
         this.body = "";
         this.filePath = null;
-        this.webRoot = webRootPath;
     }
 
     setHeader(name: string, value: string) {
@@ -33,7 +31,7 @@ export class BuchtaResponse {
 
     sendFile(filePath: string) {
         if (mimeLook) {
-            const mime = mimeLook.lookup(`.${filePath.split(".").pop()}`);
+            const mime = mimeLook.lookup(`.${filePath.replace("ts", "js").split(".").pop()}`);
             if (mime)
                 this.setHeader("Content-Type", mime);
         }
@@ -50,7 +48,7 @@ export class BuchtaResponse {
 
     buildResponse() {
         if (this.filePath)
-            return new Response(readFileSync(this.webRoot + this.filePath), {
+            return new Response(readFileSync(this.filePath), {
                 status: this.statusCode,
                 statusText: this.statusText,
                 headers: this.headers,
