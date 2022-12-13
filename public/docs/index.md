@@ -162,8 +162,8 @@ buchta.mixInto(NAME())
 ```
 
 #### Built in plugins
-- buchta/plugins/swagger
-- buchta/plugins/typescript
-- buchta/plugins/markdown
+- buchta/src/plugins/swagger
+- buchta/src/plugins/typescript
+- buchta/src/plugins/markdown
 
 function names are the same as files (swagger, typescript, ...)
