@@ -32,7 +32,11 @@ every `js` or `ts` file that folows this syntax `get.server.js`, `post.server.ts
 For more info, look into `public` folder
 
 ## Plugin support
-Here we go, the fun part and most interesting part is here, Plugin API is still not finished, for now there is swagger plugin made as example
+Here we go, the fun part and most interesting part is here, Plugin API is still not finished, for now there are plugins made as examples
 
-## Something else?
-Yes, many things are still being implemented so until that, I won't update npm package
+## Not done yet
+
+Entire plugin API <br>
+Huro.js <br>
+WS API <br>
+Bundler API <br>
