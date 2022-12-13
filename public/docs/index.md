@@ -66,3 +66,30 @@ export default {
 > > type: Array<br>
 > > Plugins what will be used by Buchta <br>
 > > default: [] <br>
+
+
+### Server run function
+
+Syntax <br>
+
+`method`.server.`js`/`ts`
+
+Buchta HTTP method support:
+- get
+- post
+- put
+- delete
+
+Inside file
+```
+// Function that will be executed by the server on each request on specified HTTP method
+export default function (req: BuchtaRequest, res: BuchtaResponse) {
+    res.send(`I am ${req.query.get("name")}\n`);
+}
+
+// optional, this object will be sent to every function that was assigned by a plugin
+export const data = {
+
+}
+```
+
