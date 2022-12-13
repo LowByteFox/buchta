@@ -1,9 +1,18 @@
 {
-  "compilerOptions": {
-    "lib": ["ESNext"],
-    "module": "esnext",
-    "target": "esnext",
-    // "bun-types" is the important part
-    "types": ["bun-types", "node"]
-  }
+    "include": ["src/**/*"],
+    "exclude": ["src/**/example.ts"],
+    "compilerOptions": {
+        "lib": [
+            "ESNext"
+        ],
+        "module": "esnext",
+        "declaration": true,
+        "emitDeclarationOnly": true,
+        "target": "esnext",
+        "types": [
+            "bun-types",
+            "node"
+        ],
+        "outDir": "types"
+    }
 }

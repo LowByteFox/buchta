@@ -6,6 +6,7 @@
   "contributors": [
     "Ján Gajdoš <gajdos.jan77@gmail.com>"
   ],
+  "main": "src/buchta.ts",
   "license": "ISC",
   "keywords": [
     "buchta",
