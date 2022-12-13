@@ -124,18 +124,18 @@ export function NAME() {
 }
 ```
 #### API
-`this.fextHandlers` -> map with functions set as file extension handler
+`this.assignExtHandler` -> function to add file extension handler
 ```
-this.fextHandlers.set("ext", async (route: string, file: string) => {
+this.assignExtHandler("ext", async (route: string, file: string) => {
     // route -> specific route
     // file -> path to the file
     // handle file here and setup route for it
 });
 ```
 
-`this.assingAfterRouting` -> function to add and which will be executed while route is being registered
+`this.assignAfterRouting` -> function to add and which will be executed while route is being registered
 ```
-this.assingAfterRouting((options: any) => {
+this.assignAfterRouting((options: any) => {
     // options -> object passed from server run function `data`
     // code
 })

@@ -11,7 +11,7 @@ export class Buchta {
     private config: any;
     port: number;
     private afterRouting: Array<Function> = new Array();
-    fextHandlers: Map<string, Function> = new Map();
+    private fextHandlers: Map<string, Function> = new Map();
 
     get: route;
     post: route;
@@ -97,8 +97,12 @@ export class Buchta {
         })();
     }
 
-    assingAfterRouting(callback: Function) {
+    assignAfterRouting(callback: Function) {
         this.afterRouting.push(callback);
+    }
+
+    assignExtHandler(ext: string, callback: Function) {
+        this.fextHandlers.set(ext, callback);
     }
 
     private async getFiles(dir: string) {

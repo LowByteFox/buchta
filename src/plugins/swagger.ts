@@ -84,11 +84,11 @@ export function swagger (route: string) {
                 this.swagger.defs.schemes.push(scheme);
             }
         }
-        this.assingAfterRouting((options: any) => {
+        this.assignAfterRouting((options: any) => {
             this.swagger.defs.paths[options.path] = {};
             this.swagger.defs.paths[options.path][options.method] = options.data;
         })
-        
+
         this.swagger.setup(setRoute);
     }
 }

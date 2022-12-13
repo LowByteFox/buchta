@@ -5,7 +5,7 @@ import { BuchtaResponse } from "../response";
 
 export function markdown() {
     return function () {
-        this.fextHandlers.set("md", (route: string, file: string) => {
+        this.assignExtHandler("md", (route: string, file: string) => {
             const content = readFileSync(file, {encoding: "utf-8"});
             const html = marked.parse(content);
             if (route.endsWith(`${this.config.routes.fileName}.md`))
