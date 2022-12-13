@@ -1,7 +1,7 @@
-import { swagger } from "./src/plugins/swagger";
 import { typescript } from "./src/plugins/typescript";
 
 export default {
+    port: 3000,
     // @ts-ignore yes there is import.meta.dir
     rootDirectory: import.meta.dir + "/public",
 
@@ -13,5 +13,5 @@ export default {
         fileName: "index"
     },
 
-    plugins: [swagger, typescript]
+    plugins: [typescript]
 }

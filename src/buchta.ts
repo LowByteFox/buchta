@@ -112,6 +112,10 @@ export class Buchta {
 
     run = (serverPort: number = 3000, func?: Function, server = this) => {
         server.port = serverPort;
+        if (this.config.port) {
+            serverPort = this.config.port;
+            server.port = serverPort;
+        }
         Bun.serve({
             async fetch(req: BuchtaRequest): Promise<Response> {
                 const temp = new URL(req.url);

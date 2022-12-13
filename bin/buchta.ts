@@ -21,7 +21,7 @@ if (command == "--help" || command == "-h") {
 
 if (command == "init") {
     require('./init');
-    console.log('Created basic project structure');
+    console.log('Created basic project structure\nstart server using \'bun run buchta serve\'');
 }
 
 if (command == "serve") {
