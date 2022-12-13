@@ -5,8 +5,19 @@
 
 ## Get Started
 
-Buchta is under renovation, sorry<br>
-<br>
+```
+bun run buchta init # create project template
+bun run buchta serve # start built-in server
+```
+
+## Docs
+to have better docs readability
+```
+git clone https://github.com/Fire-The-Fox/buchta.git
+cd buchta
+bun run buchta serve
+# open browser and type localhost:3000/docs/
+```
 
 # Changes v3 -> v4
 
