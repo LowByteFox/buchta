@@ -30,6 +30,19 @@ bun run buchta serve # start buchta server
       \- post.server.ts # default function will execute on the server on POST request
 ```
 
+### Creating own server
+```
+import { Buchta } from "buchta";
+
+const app = new Buchta();
+
+app.get("/", (req, res) => {
+    res.send("Hello, World");
+})
+
+app.run();
+```
+
 ### buchta.config.ts
 This file is a configuration file for Buchta. You can use built-in plugins or just play around with the config
 
@@ -93,3 +106,62 @@ export const data = {
 }
 ```
 
+### Writing a plugin
+
+#### Plugin template 
+```
+// imports
+
+// NAME is plugin name
+export function NAME() {
+    // stuff for your plugin you don't want to expose
+    return function () {
+        // `this` variable is Buchta object
+    }
+}
+```
+#### API
+`this.fextHandlers` -> map with functions set as file extension handler
+```
+this.fextHandlers.set("ext", async (route: string, file: string) => {
+    // route -> specific route
+    // file -> path to the file
+    // handle file here and setup route for it
+});
+```
+
+`this.assingAfterRouting` -> function to add and which will be executed while route is being registered
+```
+this.assingAfterRouting((options: any) => {
+    // options -> object passed from server run function `data`
+    // code
+})
+```
+
+#### Adding plugin to buchta
+`buchta.config.ts`
+```
+// xyz is name of file containing your plugin function
+import NAME from "./xyz";
+...
+plugins: [..., NAME]
+...
+```
+
+#### Adding plugins using code
+```
+// xyz is name of file containing your plugin function
+import NAME from "./xyz";
+
+...
+// the function here must be called
+buchta.mixInto(NAME())
+...
+```
+
+#### Built in plugins
+- buchta/plugins/swagger
+- buchta/plugins/typescript
+- buchta/plugins/markdown
+
+function names are the same as files (swagger, typescript, ...)

@@ -116,7 +116,7 @@ export class Buchta {
 
     run = (serverPort: number = 3000, func?: Function, server = this) => {
         server.port = serverPort;
-        if (this.config.port) {
+        if (this.config?.port) {
             serverPort = this.config.port;
             server.port = serverPort;
         }
