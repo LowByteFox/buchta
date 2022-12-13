@@ -1,5 +1,6 @@
 import { swagger } from "./src/plugins/swagger";
 import { typescript } from "./src/plugins/typescript";
+import { markdown } from "./src/plugins/markdown";
 
 export default {
     port: 3000,
@@ -14,5 +15,5 @@ export default {
         fileName: "index"
     },
 
-    plugins: [swagger, typescript]
+    plugins: [swagger, typescript, markdown]
 }

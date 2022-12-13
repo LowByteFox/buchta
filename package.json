@@ -1,35 +1,37 @@
 {
-    "name": "buchta",
-    "description": "Huro.js framework",
-    "module": "src/buchta.ts",
-    "version": "0.4.0",
-    "contributors": [
-        "Ján Gajdoš <gajdos.jan77@gmail.com>"
-    ],
-    "bin": {
-        "buchta": "bin/buchta.ts"
-    },
-    "scripts": {
-        "buchta": "bin/buchta.ts"
-    },
-    "main": "src/buchta.ts",
-    "license": "ISC",
-    "keywords": [
-        "buchta",
-        "framework",
-        "web",
-        "http",
-        "rest",
-        "router",
-        "app",
-        "api",
-        "csr"
-    ],
-    "devDependencies": {
-        "@types/node": "^18.7.14",
-        "bun-types": "^0.1.11"
-    },
-    "dependencies": {
-        "mime-types": "^2.1.35"
-    }
+  "name": "buchta",
+  "description": "Huro.js framework",
+  "module": "src/buchta.ts",
+  "version": "0.4.0",
+  "contributors": [
+    "Ján Gajdoš <gajdos.jan77@gmail.com>"
+  ],
+  "bin": {
+    "buchta": "bin/buchta.ts"
+  },
+  "scripts": {
+    "buchta": "bin/buchta.ts"
+  },
+  "main": "src/buchta.ts",
+  "license": "ISC",
+  "keywords": [
+    "buchta",
+    "framework",
+    "web",
+    "http",
+    "rest",
+    "router",
+    "app",
+    "api",
+    "csr"
+  ],
+  "devDependencies": {
+    "@types/node": "^18.7.14",
+    "bun-types": "^0.1.11"
+  },
+  "dependencies": {
+    "@types/marked": "^4.0.8",
+    "marked": "^4.2.4",
+    "mime-types": "^2.1.35"
+  }
 }
