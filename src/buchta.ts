@@ -11,6 +11,7 @@ export class Buchta {
     private config: any;
     port: number;
     private afterRouting: Array<Function> = new Array();
+    fextHandlers: Map<string, Function> = new Map();
 
     get: route;
     post: route;
@@ -38,6 +39,13 @@ export class Buchta {
         try {
             this.config = require(process.cwd() + "/buchta.config.ts").default;
         } catch (e) { }
+
+        if (this.config?.plugins) {
+            for (const plugin of this.config.plugins) {
+                this.mixInto(plugin());
+            }
+        }
+
         (async () => {
             if (this.config) {
                 if (!this.config.rootDirectory) return;
@@ -50,7 +58,7 @@ export class Buchta {
                     const base = splited[0];
                     const ext = splited[splited.length - 1];
                     const ending = this.config.routes?.fileName || "index";
-                    if (base.endsWith(ending) && ext != "ts" && ext != "js") {
+                    if (base.endsWith(ending) && ext == "html") {
                         this.get(base.substring(0, base.length - ending.length), (req, res) => {
                             res.sendFile(file);
                         });
@@ -67,20 +75,22 @@ export class Buchta {
                                 module.default(req, res);
                             }, module.data);
                         } else {
-                            this.get(route, (_req, res) => {
-                                res.sendFile(file);
-                            });
+                            if (this.fextHandlers.has(ext)) {
+                                this.fextHandlers.get(ext)?.(route, file);
+                            } else {
+                                this.get(route, (_req, res) => {
+                                    res.sendFile(file);
+                                });
+                            }
+                        }
+                    } else {
+                        if (this.fextHandlers.has(ext)) {
+                            this.fextHandlers.get(ext)?.(route, file);
                         }
                     }
                 }
             }
         })();
-
-        if (this.config?.plugins) {
-            for (const plugin of this.config.plugins) {
-                this.mixInto(plugin());
-            }
-        }
     }
 
     assingAfterRouting(callback: Function) {
