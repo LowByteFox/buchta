@@ -5,6 +5,7 @@ export declare class Buchta {
     private config;
     port: number;
     private afterRouting;
+    fextHandlers: Map<string, Function>;
     get: route;
     post: route;
     put: route;
