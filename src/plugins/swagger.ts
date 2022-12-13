@@ -86,5 +86,6 @@ export function swagger () {
             this.swagger.defs.paths[options.path] = {};
             this.swagger.defs.paths[options.path][options.method] = options.data;
         })
+        this.swagger.setup("/swagger/");
     }
 }

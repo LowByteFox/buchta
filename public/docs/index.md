@@ -40,6 +40,9 @@ app.get("/", (req, res) => {
     res.send("Hello, World");
 })
 
+// params
+// port -> port which will be used
+// func -> function that will be executed after the server has started
 app.run();
 ```
 
