@@ -1,3 +1,5 @@
+import { swagger } from "./src/plugins/swagger"
+
 export default {
     rootDirectory: import.meta.dir + "/public",
 
@@ -10,5 +12,5 @@ export default {
     },
 
     // TODO: make plugins work using configuration files
-    plugins: []
+    plugins: [swagger]
 }

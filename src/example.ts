@@ -1,10 +1,6 @@
 import { Buchta } from "./buchta";
-import { swagger } from "./plugins/swagger";
 
 const app = new Buchta();
-
-// mixing ingredient `Swagger` into Buchta as if it was part of recipe
-app.mixInto(swagger());
 
 // setting up tag and scheme for Swagger
 app.swagger.addTag("pet", "Pet info");

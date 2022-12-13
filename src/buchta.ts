@@ -28,22 +28,20 @@ export class Buchta {
                         func.call(this, {
                             data,
                             method,
-                            path,            
+                            path,
                         });
                     }
                 }
             };
         }
 
+        try {
+            this.config = require(process.cwd() + "/buchta.config.ts").default;
+        } catch (e) { }
         (async () => {
-            try {
-                this.config = (await import(process.cwd() + "/buchta.config.ts")).default;
-            } catch (e) { }
-        })().then(async () => {
             if (this.config) {
                 if (!this.config.rootDirectory) return;
                 const root = this.config.rootDirectory;
-
                 const files = await this.getFiles(root);
                 const methods = ["get", "post", "put", "delete"];
                 for (const file of files) {
@@ -76,7 +74,13 @@ export class Buchta {
                     }
                 }
             }
-        });
+        })();
+
+        if (this.config?.plugins) {
+            for (const plugin of this.config.plugins) {
+                this.mixInto(plugin());
+            }
+        }
     }
 
     assingAfterRouting(callback: Function) {
