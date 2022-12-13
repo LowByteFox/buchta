@@ -1,1 +1,1 @@
-export declare function swagger(): () => void;
+export declare function swagger(route: string): () => void;

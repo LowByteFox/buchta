@@ -5,13 +5,14 @@ export declare class Buchta {
     private config;
     port: number;
     private afterRouting;
-    fextHandlers: Map<string, Function>;
+    private fextHandlers;
     get: route;
     post: route;
     put: route;
     delete: route;
     constructor();
-    assingAfterRouting(callback: Function): void;
+    assignAfterRouting(callback: Function): void;
+    assignExtHandler(ext: string, callback: Function): void;
     private getFiles;
     mixInto(plugin: any): void;
     run: (serverPort?: number, func?: Function, server?: this) => void;
