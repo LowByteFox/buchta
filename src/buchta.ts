@@ -86,6 +86,10 @@ export class Buchta {
                     } else {
                         if (this.fextHandlers.has(ext)) {
                             this.fextHandlers.get(ext)?.(route, file);
+                        } else {
+                            this.get(route, (_req, res) => {
+                                res.sendFile(file);
+                            });
                         }
                     }
                 }
