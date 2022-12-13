@@ -15,6 +15,7 @@ to have better docs readability
 ```
 git clone https://github.com/Fire-The-Fox/buchta.git
 cd buchta
+bun install
 bun run buchta serve
 # open browser and type localhost:3000/docs/
 ```
