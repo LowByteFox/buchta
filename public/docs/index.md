@@ -147,7 +147,7 @@ this.assingAfterRouting((options: any) => {
 // xyz is name of file containing your plugin function
 import NAME from "./xyz";
 ...
-plugins: [..., NAME]
+plugins: [..., NAME()]
 ...
 ```
 
@@ -157,7 +157,6 @@ plugins: [..., NAME]
 import NAME from "./xyz";
 
 ...
-// the function here must be called
 buchta.mixInto(NAME())
 ...
 ```

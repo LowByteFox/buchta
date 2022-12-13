@@ -1,9 +1,9 @@
 import { BuchtaRequest } from "../request";
 import { BuchtaResponse } from "../response";
 
-export function swagger () {
+export function swagger (route: string) {
     // page that will be rendered by the server
-    const swaggerPage = (path, port) => {
+    const swaggerPage = (path: string, port: string) => {
         return `
         <!DOCTYPE html>
         <html lang="en">
@@ -44,6 +44,8 @@ export function swagger () {
         </html>
         `;
     }
+
+    const setRoute = route;
 
     return function () {
         // assigning swagger object to Buchta instance, so it can be accessed from the outside
@@ -86,6 +88,7 @@ export function swagger () {
             this.swagger.defs.paths[options.path] = {};
             this.swagger.defs.paths[options.path][options.method] = options.data;
         })
-        this.swagger.setup("/swagger/");
+        
+        this.swagger.setup(setRoute);
     }
 }

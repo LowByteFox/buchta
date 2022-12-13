@@ -42,7 +42,7 @@ export class Buchta {
 
         if (this.config?.plugins) {
             for (const plugin of this.config.plugins) {
-                this.mixInto(plugin());
+                this.mixInto(plugin);
             }
         }
 

@@ -15,5 +15,5 @@ export default {
         fileName: "index"
     },
 
-    plugins: [swagger, typescript, markdown]
+    plugins: [swagger("/swag/"), typescript(), markdown()]
 }
