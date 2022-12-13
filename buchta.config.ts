@@ -1,3 +1,4 @@
+import { swagger } from "./src/plugins/swagger";
 import { typescript } from "./src/plugins/typescript";
 
 export default {
@@ -13,5 +14,5 @@ export default {
         fileName: "index"
     },
 
-    plugins: [typescript]
+    plugins: [swagger, typescript]
 }

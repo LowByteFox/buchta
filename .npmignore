@@ -1,5 +1,7 @@
-tsconfig.json
 bun.lockb
 public/
 src/example.ts
 .cache/
+test/
+buchta.config.ts
+buchta_old.png
