@@ -14,6 +14,10 @@
   },
   "main": "src/buchta.ts",
   "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Fire-The-Fox/buchta.git"
+  },
   "keywords": [
     "buchta",
     "framework",
