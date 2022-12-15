@@ -5,13 +5,12 @@
         "lib": [
             "ESNext"
         ],
-        "module": "esnext",
+        "module": "ESNext",
         "declaration": true,
         "emitDeclarationOnly": true,
-        "target": "esnext",
+        "target": "ESNext",
         "types": [
-            "bun-types",
-            "node"
+            "bun-types"
         ],
         "outDir": "types"
     }
