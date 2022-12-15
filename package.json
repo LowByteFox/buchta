@@ -2,7 +2,7 @@
   "name": "buchta",
   "description": "Huro.js framework",
   "module": "src/buchta.ts",
-  "version": "0.4.01",
+  "version": "0.4.11",
   "contributors": [
     "Ján Gajdoš <gajdos.jan77@gmail.com>"
   ],
@@ -10,7 +10,8 @@
     "buchta": "bin/buchta.ts"
   },
   "scripts": {
-    "buchta": "bin/buchta.ts"
+    "buchta": "bin/buchta.ts",
+    "postinstall": "ln -s ./src/plugins ./plugins"
   },
   "main": "src/buchta.ts",
   "license": "ISC",
