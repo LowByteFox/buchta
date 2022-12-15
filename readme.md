@@ -46,9 +46,15 @@ For more info, look into `public` folder
 ## Plugin support
 Here we go, the fun part and most interesting part is here, Plugin API is still not finished, for now there are plugins made as examples
 
+## WS API
+3 custom methods <br>
+
+`Buchta.wsOnOpen` -> add function that will be called when client connects <br>
+`Buchta.wsOnMessage` -> add function that will be called when client sends message <br>
+`Buchta.wsOnClose` -> add function that will be called when client disconnects <br>
+
 ## Not done yet
 
 Entire plugin API <br>
 Huro.js <br>
-WS API <br>
 Bundler API <br>

@@ -82,6 +82,12 @@ export default {
 > > type: Array<br>
 > > Plugins what will be used by Buchta <br>
 > > default: [] <br>
+> 
+> ws
+> > type: Object <br>
+> > Settings for websocket <br>
+> > default: { enable: true } <br>
+> > enable -> if set to false, websocket server won't launch or just don't specify ws
 
 
 ### Server run function
