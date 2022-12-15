@@ -12,6 +12,10 @@ export class Buchta {
     port: number;
     private afterRouting: Array<Function> = new Array();
     private fextHandlers: Map<string, Function> = new Map();
+    private wsOpen: Array<Function> = new Array();
+    private wsMessage: Array<Function> = new Array();
+    private wsClose: Array<Function> = new Array();
+    enableWs = false;
 
     get: route;
     post: route;
@@ -39,6 +43,10 @@ export class Buchta {
         try {
             this.config = require(process.cwd() + "/buchta.config.ts").default;
         } catch (e) { }
+
+        if (this.config?.ws?.enable) {
+            this.enableWs = this.config.ws.enable;
+        }
 
         if (this.config?.plugins) {
             for (const plugin of this.config.plugins) {
@@ -118,14 +126,51 @@ export class Buchta {
         plugin.call(this);
     }
 
+    wsOnMessage(func: (ws: WebSocket, msg: String) => void) {
+        this.wsMessage.push(func);
+    }
+
+    wsOnOpen(func: (ws: WebSocket) => void) {
+        this.wsOpen.push(func);
+    }
+
+    wsOnClose(func: (ws: WebSocket) => void) {
+        this.wsClose.push(func);
+    }
+
     run = (serverPort: number = 3000, func?: Function, server = this) => {
         server.port = serverPort;
         if (this.config?.port) {
             serverPort = this.config.port;
             server.port = serverPort;
         }
+        let ws: any;
+        if (!this.enableWs) {
+            ws = {};
+        } else {
+            ws = {
+                open: (ws: WebSocket) => {
+                    for (const fun of this.wsOpen) {
+                        fun(ws);
+                    }
+                },
+                message: (ws: WebSocket, msg: String) => {
+                    for (const fun of this.wsMessage) {
+                        fun(ws, msg);
+                    }
+                },
+                close: (ws: WebSocket) => {
+                    for (const fun of this.wsClose) {
+                        fun(ws);
+                    }
+                }
+            };
+        }
+
         Bun.serve({
-            async fetch(req: BuchtaRequest): Promise<Response> {
+            // @ts-ignore wsServer bun-types issues
+            async fetch(req: BuchtaRequest, wsServer): Promise<Response> {
+                if (wsServer.upgrade(req)) return;
                 const temp = new URL(req.url);
                 const routeFunc = server.router.handle(temp.pathname, req.method.toLowerCase());
                 req.params = server.router.params;
@@ -141,7 +186,9 @@ export class Buchta {
                 return new Response("404\n");
             },
             port: serverPort,
-            development: true
+            development: true,
+            // @ts-ignore bun-ws missing types
+            websocket: ws
         });
         console.log(`Buchta entered oven and met Bun. Both of them started talking about HTTP on port ${serverPort}`);
         func?.();

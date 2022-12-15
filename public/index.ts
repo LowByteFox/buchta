@@ -1,4 +1,5 @@
-console.log("Hello, world! from Buchta typescript plugin");
-const num: number = 4;
+const exampleSocket = new WebSocket("ws://localhost:3000/");
 
-console.log(`Typescript check: ${num}`);
+exampleSocket.onopen = (e) => {
+    exampleSocket.send("Hello, world");
+}
