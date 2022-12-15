@@ -1,6 +1,6 @@
-import { Buchta } from "./types/buchta";
-import { BuchtaRequest } from "./types/request";
-import { BuchtaResponse } from "./types/response";
+import { Buchta } from "./src/buchta";
+import { BuchtaRequest } from "./src/request";
+import { BuchtaResponse } from "./src/response";
 
 declare module "buchta" {
     export { Buchta, BuchtaRequest, BuchtaResponse };
