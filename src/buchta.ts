@@ -113,6 +113,10 @@ export class Buchta {
         this.fextHandlers.set(ext, callback);
     }
 
+    getDefaultFileName() {
+        return this.config.routes.fileName;
+    }
+
     private async getFiles(dir: string) {
         const dirents = await readdir(dir, { withFileTypes: true });
         const files = await Promise.all(dirents.map((dirent) => {
