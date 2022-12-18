@@ -35,6 +35,8 @@
     "bun-types": "^0.1.11"
   },
   "dependencies": {
-    "mime-types": "^2.1.35"
+    "marked": "^4.2.4",
+    "mime-types": "^2.1.35",
+    "svelte": "^3.55.0"
   }
 }
