@@ -10,14 +10,15 @@ bun run buchta init # create project template
 bun run buchta serve # start built-in server
 ```
 
-## Docs
+## Working with testing server
 to have better docs readability
 ```
 git clone https://github.com/Fire-The-Fox/buchta.git
 cd buchta
 bun install
-bun run buchta serve
-# open browser and type localhost:3000/docs/
+bun add marked svelte
+bun run src/example.ts
+# open browser and type localhost:4000/
 ```
 
 # Changes v3 -> v4
@@ -43,18 +44,37 @@ BuchtaRequest is gone, `request` is casual `Request` with `params` and `query` a
 every `js` or `ts` file that folows this syntax `get.server.js`, `post.server.ts` will be executed on the server <br>
 For more info, look into `public` folder
 
-## Plugin support
-Here we go, the fun part and most interesting part is here, Plugin API is still not finished, for now there are plugins made as examples
+## Plugin API
+The Plugin API is done!<br>
+List of API methods<br>
+`Buchta.`
+* `assignAfterRouting`
+* `assignExtHandler`
+* `getDefaultFileName`
+* `mixInto`
+* `getRoot`
+* `getPort`
 
 ## WS API
 3 custom methods <br>
 
-`Buchta.wsOnOpen` -> add function that will be called when client connects <br>
-`Buchta.wsOnMessage` -> add function that will be called when client sends message <br>
-`Buchta.wsOnClose` -> add function that will be called when client disconnects <br>
+`Buchta.`
+* `wsOnOpen`
+* `wsOnMessage`
+* `wsOnClose`
+
+## Bundler
+`BuchtaBundler` is a wrapper for Bun's bundler, a complex system made that works outside `bun dev`
+
+## Bundler API
+`Buchta.bundler.`
+* `addCustomFile`
+* `addPatch`
 
 ## Not done yet
 
-Entire plugin API <br>
 Huro.js <br>
-Bundler API <br>
+
+## Buchta now has official discord server
+<a href="https://discord.gg/zqEDb54JBx">Join here!</a><br>
+Discord server was made in a hurry, will be fixed!

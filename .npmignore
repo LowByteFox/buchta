@@ -5,3 +5,4 @@ src/example.ts
 test/
 buchta.config.ts
 buchta_old.png
+.buchta/

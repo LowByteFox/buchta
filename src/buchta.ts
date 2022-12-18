@@ -4,11 +4,13 @@ import { BuchtaResponse } from "./response";
 
 import { readdir } from "fs/promises";
 import { resolve } from "path";
+import { BuchtaBundler } from "./bundler";
 
 export class Buchta {
     [x: string]: any;
-    router: Router;
+    private router: Router;
     private config: any;
+    bundler: BuchtaBundler;
     port: number;
     private afterRouting: Array<Function> = new Array();
     private fextHandlers: Map<string, Function> = new Map();
@@ -60,6 +62,8 @@ export class Buchta {
                 const root = this.config.rootDirectory;
                 const files = await this.getFiles(root);
                 const methods = ["get", "post", "put", "delete"];
+                this.bundler = new BuchtaBundler(this.config.rootDirectory);
+                this.bundler.prepare();
                 for (const file of files) {
                     const route = file.substring(root.length).replace("[", ":").replace("]", "");
                     const splited = route.split(".");
@@ -83,6 +87,7 @@ export class Buchta {
                                 module.default(req, res);
                             }, module.data);
                         } else {
+                            this.bundler.addFile(file);
                             if (this.fextHandlers.has(ext)) {
                                 this.fextHandlers.get(ext)?.(route, file);
                             } else {
@@ -101,18 +106,32 @@ export class Buchta {
                         }
                     }
                 }
+                this.bundler.bundle();
+                this.bundler.build(this);
             }
         })();
     }
 
-    assignAfterRouting(callback: Function) {
+    /**
+     * Add a callback that will get executed after the route has been registered
+     * @param {Function} callback - The function
+     */
+   assignAfterRouting(callback: Function) {
         this.afterRouting.push(callback);
     }
 
+    /**
+     * Add a callback that will get executed when FS routing detects specified extension
+     * @param {string} ext - File extension
+     * @param {Function} callback - The function
+     */
     assignExtHandler(ext: string, callback: Function) {
         this.fextHandlers.set(ext, callback);
     }
 
+    /**
+     * Returns fileName used for / routing: /index.html -> / ( index )
+     */
     getDefaultFileName() {
         return this.config.routes.fileName;
     }
@@ -126,22 +145,57 @@ export class Buchta {
         return Array.prototype.concat(...files);
     }
 
-    mixInto(plugin: any) {
+    /**
+     * Adds plugin made for Buchta
+     * @param {Function} plugin - Function returned by plugin
+     */
+    mixInto(plugin: Function) {
         plugin.call(this);
     }
 
+    /**
+     * Returns root directory path
+     */
+    getRoot() {
+        return this.config.rootDirectory;
+    }
+
+    /**
+     * Returns port used for server
+     */
+    getPort() {
+        return this.config.port;
+    }
+
+    /**
+     * Add function that will be trigerred when websockets recieves message
+     * @param {(ws: WebSocket, msg: String) => void} func - the function
+     */
     wsOnMessage(func: (ws: WebSocket, msg: String) => void) {
         this.wsMessage.push(func);
     }
 
+    /**
+     * Add function that will be trigerred when client connects to websocket server
+     * @param {(ws: WebSocket) => void} func - the function
+     */
     wsOnOpen(func: (ws: WebSocket) => void) {
         this.wsOpen.push(func);
     }
 
+    /**
+     * Add function that will be trigerred when client disconnects to websocket server
+     * @param {(ws: WebSocket) => void} func - the function
+     */
     wsOnClose(func: (ws: WebSocket) => void) {
         this.wsClose.push(func);
     }
 
+    /**
+     * Run the server
+     * @param {number} [serverPort=3000] - port on which will the server run
+     * @param {Function} [func=undefined] - function that will run after the server has started
+     */
     run = (serverPort: number = 3000, func?: Function, server = this) => {
         server.port = serverPort;
         if (this.config?.port) {
@@ -150,7 +204,7 @@ export class Buchta {
         }
         let ws: any;
         if (!this.enableWs) {
-            ws = {};
+            ws = null;
         } else {
             ws = {
                 open: (ws: WebSocket) => {
@@ -173,8 +227,8 @@ export class Buchta {
 
         Bun.serve({
             // @ts-ignore wsServer bun-types issues
-            async fetch(req: BuchtaRequest, wsServer): Promise<Response> {
-                if (wsServer.upgrade(req)) return;
+            async fetch(req: BuchtaRequest, wsServer: any = null): Promise<Response> {
+                if (wsServer?.upgrade(req)) return;
                 const temp = new URL(req.url);
                 const routeFunc = server.router.handle(temp.pathname, req.method.toLowerCase());
                 req.params = server.router.params;

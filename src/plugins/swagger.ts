@@ -1,6 +1,11 @@
+import { Buchta } from "../buchta";
 import { BuchtaRequest } from "../request";
 import { BuchtaResponse } from "../response";
 
+/**
+ * Swagger plugin for Buchta
+ * @param {string} route - route where will swagger sit
+ */
 export function swagger (route: string) {
     // page that will be rendered by the server
     const swaggerPage = (path: string, port: string) => {
@@ -47,13 +52,13 @@ export function swagger (route: string) {
 
     const setRoute = route;
 
-    return function () {
+    return function (this: Buchta) {
         // assigning swagger object to Buchta instance, so it can be accessed from the outside
         this.swagger = {
             setup: (path: string) => {
                 if (path) {
                     this.get(path, (_req: BuchtaRequest, res: BuchtaResponse) => {
-                        res.send(swaggerPage(path, this.port));
+                        res.send(swaggerPage(path, this.getPort()));
                         res.setHeader("Content-Type", "text/html");
                     });
 
@@ -84,6 +89,7 @@ export function swagger (route: string) {
                 this.swagger.defs.schemes.push(scheme);
             }
         }
+
         this.assignAfterRouting((options: any) => {
             this.swagger.defs.paths[options.path] = {};
             this.swagger.defs.paths[options.path][options.method] = options.data;

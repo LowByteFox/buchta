@@ -1,5 +1,3 @@
-const exampleSocket = new WebSocket("ws://localhost:3000/");
+import { marked } from "marked";
 
-exampleSocket.onopen = (e) => {
-    exampleSocket.send("Hello, world");
-}
+console.log(marked.parse("# Hello, World from Buchta Bundler"));

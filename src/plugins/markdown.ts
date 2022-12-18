@@ -4,6 +4,9 @@ import { Buchta } from "../buchta";
 import { BuchtaRequest } from "../request";
 import { BuchtaResponse } from "../response";
 
+/**
+ * Markdown support for Buchta
+ */
 export function markdown() {
     return function (this: Buchta) {
         this.assignExtHandler("md", (route: string, file: string) => {

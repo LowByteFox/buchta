@@ -1,6 +1,7 @@
 import { swagger } from "./src/plugins/swagger";
 import { typescript } from "./src/plugins/typescript";
 import { markdown } from "./src/plugins/markdown";
+import { svelte } from "./src/plugins/svelte";
 
 export default {
     port: 4000,
@@ -16,8 +17,8 @@ export default {
     },
 
     ws: {
-        enable: true  
+        enable: true
     },
 
-    plugins: [swagger("/swag/"), typescript(), markdown()]
+    plugins: [swagger("/swag/"), typescript(), markdown(), svelte()]
 }

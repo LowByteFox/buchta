@@ -2,7 +2,7 @@
   "name": "buchta",
   "description": "Huro.js framework",
   "module": "src/buchta.ts",
-  "version": "0.4.13",
+  "version": "0.4.2",
   "contributors": [
     "Ján Gajdoš <gajdos.jan77@gmail.com>"
   ],
@@ -35,8 +35,6 @@
     "bun-types": "^0.1.11"
   },
   "dependencies": {
-    "@types/marked": "^4.0.8",
-    "marked": "^4.2.4",
     "mime-types": "^2.1.35"
   }
 }
