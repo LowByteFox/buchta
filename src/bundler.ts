@@ -1,6 +1,7 @@
 // @ts-ignore bun issues
 import { file, spawnSync } from "bun";
 import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "fs";
+import { dirname } from "path";
 import { Buchta } from "./buchta";
 import { BuchtaRequest } from "./request";
 import { BuchtaResponse } from "./response";
@@ -29,13 +30,16 @@ export class BuchtaBundler {
     /**
      * Tell bundler to also include this file as custom file
      * @param {string} route - route where the file is located
-     * @param {string} name - name of the file, i recommend using .js as file extension
+     * @param {string} path - path of the file, i recommend using .js as file extension
      * @param {string} content - content of the file
      */
-    addCustomFile(route: string, name: string, content: string) {
-        this.customRoutes.set(route, `${this.buildRoot}/extras/${name}`);
-        writeFileSync(`${this.buildRoot}/extras/${name}`, content);
-        this.customImports.push(`${this.buildRoot}/extras/${name}`);
+    addCustomFile(route: string, path: string, content: string) {
+        this.customRoutes.set(route, `${this.buildRoot}/extras/${path}`);
+        const basePath = dirname(`${this.buildRoot}/extras/${path}`);
+        if (!existsSync(basePath))
+            mkdirSync(basePath, {recursive: true});
+        writeFileSync(`${this.buildRoot}/extras/${path}`, content);
+        this.customImports.push(`${this.buildRoot}/extras/${path}`);
     }
 
     /**
@@ -65,6 +69,7 @@ export class BuchtaBundler {
      */
     bundle() {
         spawnSync(["bun", "bun", ...this.files, ...this.customImports]);
+        if (!existsSync(`${process.cwd()}/node_modules.bun`)) return;
         const { stdout, stderr } = spawnSync([`${process.cwd()}/node_modules.bun`]);
         this.bundleCode = stdout.toString();
         console.log(stderr.toString());
@@ -75,6 +80,7 @@ export class BuchtaBundler {
      * @param {Buchta} server - server used for everything 
      */
     build(server: Buchta) {
+        if (!existsSync(`${process.cwd()}/node_modules.bun`)) return;
         const { stderr } = spawnSync(["bun", "build", "--outdir", this.buildRoot, ...this.files, ...this.customImports]);
         console.log(stderr.toString());
 
@@ -96,7 +102,7 @@ export class BuchtaBundler {
             const finalPath = `${this.buildRoot}/.buchta/extras/${route}`;
             const content = readFileSync(finalPath, {encoding: "utf-8"});
             
-            const noLocalhost = content.replaceAll(/http.+?(?=\/n)/g, "");
+            const noLocalhost = content.replaceAll(/http.+?(?=\/node_modules)/g, "");
             const newContent = noLocalhost.replaceAll(/node_modules.+bun/g, "buchta-build-bundle/");
             if (this.patches.has(key)) {
                 this.patches.get(key).call(server, key, newContent);

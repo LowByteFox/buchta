@@ -13,7 +13,7 @@ import { readFileSync } from "fs";
 export function svelte(compilerOptions: any = {}) {
 
     const opts = compilerOptions;
-    const patched: Map<string, string> = new Map();
+    const patched: Map<string, Array<string>> = new Map();
 
     // TODO: Until Buchta v4.3, this function will have to exist to generate html
     // What does it mean? Buchta v4.3 will have `template` directory for this kind of stuff
@@ -42,7 +42,12 @@ new Component({target: document.body});
         const split: string[] = code.split("\n");
         for (let i = 0; i < split.length; i++) {
             if (split[i].includes("import") && (split[i].includes(".svelte") || split[i].includes(".js"))) {
-                patched.set(route, split[i]);
+                if (!patched.has(route)) {
+                    patched.set(route, new Array());
+                }
+                const obj = patched.get(route);
+                if (obj)
+                    obj.push(split[i]);
                 split[i] = `// ${split[i]}`;
             }
         }
@@ -51,7 +56,13 @@ new Component({target: document.body});
 
     function patchAfterBundle(this: Buchta, route: string, code: string) {
         if (patched.has(route)) {
-            code = `${patched.get(route)}\n${code}`;
+            const obj = patched.get(route);
+            let before = "";
+            if (obj)
+                for (const e of obj) {
+                    before += `${e}\n`;
+                }
+            code = `${before}\n${code}`;
         }
         if (route.endsWith(`${this.getDefaultFileName()}.svelte`)) {
             route = route.substring(0, route.length - 7 - this.getDefaultFileName().length);
@@ -79,8 +90,7 @@ new Component({target: document.body});
             });
 
             const code = hideSvelteImports(route, js.code);
-
-            this.bundler.addCustomFile(route, `${file.split("/").pop().replace("svelte", "js")}`, code);
+            this.bundler.addCustomFile(route, `${route.replace("svelte", "js")}`, code);
             this.bundler.addPatch(route, patchAfterBundle);
 
             if (route.endsWith(".svelte")) {

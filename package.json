@@ -1,8 +1,8 @@
 {
   "name": "buchta",
-  "description": "Huro.js framework",
+  "description": "Dynamic web framework",
   "module": "src/buchta.ts",
-  "version": "0.4.2",
+  "version": "0.4.25",
   "contributors": [
     "Ján Gajdoš <gajdos.jan77@gmail.com>"
   ],
@@ -27,7 +27,8 @@
     "router",
     "app",
     "api",
-    "csr"
+    "csr",
+    "plugins"
   ],
   "types": "index.d.ts",
   "devDependencies": {
@@ -35,8 +36,6 @@
     "bun-types": "^0.1.11"
   },
   "dependencies": {
-    "marked": "^4.2.4",
-    "mime-types": "^2.1.35",
-    "svelte": "^3.55.0"
+    "mime-types": "^2.1.35"
   }
 }

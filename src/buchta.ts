@@ -17,7 +17,7 @@ export class Buchta {
     private wsOpen: Array<Function> = new Array();
     private wsMessage: Array<Function> = new Array();
     private wsClose: Array<Function> = new Array();
-    enableWs = false;
+    enableWs = true;
 
     get: route;
     post: route;
@@ -84,7 +84,10 @@ export class Buchta {
                             const module = await import(file);
 
                             this[method](temp.join("/"), async (req, res) => {
-                                module.default(req, res);
+                                if (module.default.constructor.name == "AsyncFunction")
+                                    await module.default(req, res);
+                                else
+                                    module.default(req, res);
                             }, module.data);
                         } else {
                             this.bundler.addFile(file);
@@ -251,4 +254,8 @@ export class Buchta {
         console.log(`Buchta entered oven and met Bun. Both of them started talking about HTTP on port ${serverPort}`);
         func?.();
     }
+}
+
+export function get_version() {
+    return "0.4.25";
 }
