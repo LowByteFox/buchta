@@ -31,7 +31,3 @@ Fixed these bugs
 * Bundler won't run when there is nothing to bundle
 * server side functions now can be async
 * Bundler path system
-
-## Buchta now has official discord server
-<a href="https://discord.gg/zqEDb54JBx">Join here!</a><br>
-Discord server was made in a hurry, will be fixed!
