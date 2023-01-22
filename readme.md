@@ -23,11 +23,3 @@ bun add marked svelte
 bun run src/example.ts
 # open browser and type localhost:4000/
 ```
-
-## Bug fix update
-Fixed these bugs
-* WS is now enabled by default
-* Svelte hid only one import
-* Bundler won't run when there is nothing to bundle
-* server side functions now can be async
-* Bundler path system
