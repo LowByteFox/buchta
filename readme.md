@@ -1,4 +1,4 @@
-# Buchta ( disbanded )
+# Buchta ( abandoned )
 ## Dynamic Web Framework
 
 <img src="./Buchta_Dies.webp" alt="Buchta Logo" width="256"/>
