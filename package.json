@@ -2,7 +2,7 @@
   "name": "buchta",
   "description": "Dynamic web framework",
   "module": "src/buchta.ts",
-  "version": "0.4.3",
+  "version": "0.4.33",
   "contributors": [
     "Ján Gajdoš <gajdos.jan77@gmail.com>"
   ],
@@ -36,8 +36,6 @@
     "bun-types": "^0.1.11"
   },
   "dependencies": {
-    "marked": "^4.2.12",
-    "mime-types": "^2.1.35",
-    "svelte": "^3.55.1"
+    "mime-types": "^2.1.35"
   }
 }

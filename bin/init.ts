@@ -7,15 +7,18 @@ let basePath = process.cwd();
 const templates = Object.keys(VFS).slice(1);
 let current: string | null = null;
 
+console.clear();
+
 while (!current) {
-    console.clear();
     current = prompt("Type name of project: ");
     if (current?.includes("/")) {
-        console.log("/ in project name is not allowed!");
+        console.log("/ in project name is not allowed!\n");
+        current = null;
         continue;
     } 
     if (existsSync(basePath + "/" + current)) {
-        console.log(`Directory with name "${current}" exists! Specify a new name!`);
+        console.log(`Directory with name "${current}" exists! Specify a new name!\n`);
+        current = null;
     }
 }
 
