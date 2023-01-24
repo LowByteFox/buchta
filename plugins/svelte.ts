@@ -1,10 +1,10 @@
-import { Buchta } from "../buchta";
-import { BuchtaRequest } from "../request";
-import { BuchtaResponse } from "../response";
+import { Buchta } from "../src/buchta";
+import { BuchtaRequest } from "../src/request";
+import { BuchtaResponse } from "../src/response";
 
 import { compile } from "svelte/compiler";
 
-import { readFileSync } from "fs";
+import { readFileSync, writeFileSync } from "fs";
 
 /**
  * Svelte support for Buchta
@@ -17,7 +17,20 @@ export function svelte(compilerOptions: any = {}) {
 
     // TODO: Until Buchta v4.3, this function will have to exist to generate html
     // What does it mean? Buchta v4.3 will have `template` directory for this kind of stuff
-    const svelteHTML = (code: string) => {
+    function svelteHTML(this: Buchta, code: string) {
+        const template = this.getTemplate("svelte.html");
+        if (template)
+            return template.split("<!-- code -->").join(
+                `
+<script type="module">
+${code}
+new Component({
+    target: document.body,
+});
+</script>
+                `
+            )
+
         return `
 <!DOCTYPE html>
 <html lang="en">
@@ -31,7 +44,9 @@ export function svelte(compilerOptions: any = {}) {
 </body>
 <script type="module">
 ${code}
-new Component({target: document.body});
+new Component({
+    target: document.body,
+});
 </script>
 </html>
 `
@@ -41,7 +56,7 @@ new Component({target: document.body});
     const hideSvelteImports = (route: string, code: string) => {
         const split: string[] = code.split("\n");
         for (let i = 0; i < split.length; i++) {
-            if (split[i].includes("import") && (split[i].includes(".svelte") || split[i].includes(".js"))) {
+            if (split[i].includes("import") && (split[i].includes(".svelte") || split[i].includes(".js") || split[i].includes(".ts"))) {
                 if (!patched.has(route)) {
                     patched.set(route, new Array());
                 }
@@ -75,7 +90,7 @@ new Component({target: document.body});
             });
         } else {
             this.get(route, (_req: BuchtaRequest, res: BuchtaResponse) => {
-                res.send(svelteHTML(code));
+                res.send(svelteHTML.call(this, code));
                 res.setHeader("Content-Type", "text/html");
             });
         }
@@ -90,7 +105,7 @@ new Component({target: document.body});
             });
 
             const code = hideSvelteImports(route, js.code);
-            this.bundler.addCustomFile(route, `${route.replace("svelte", "js")}`, code);
+            this.bundler.addCustomFile(route, `${route.replace(".svelte", ".js")}`, code);
             this.bundler.addPatch(route, patchAfterBundle);
 
             if (route.endsWith(".svelte")) {

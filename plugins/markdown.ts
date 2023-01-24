@@ -1,8 +1,8 @@
 import { readFileSync } from "fs";
 import { marked } from "marked";
-import { Buchta } from "../buchta";
-import { BuchtaRequest } from "../request";
-import { BuchtaResponse } from "../response";
+import { Buchta } from "../src/buchta";
+import { BuchtaRequest } from "../src/request";
+import { BuchtaResponse } from "../src/response";
 
 /**
  * Markdown support for Buchta

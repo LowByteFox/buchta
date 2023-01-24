@@ -1,24 +1,16 @@
-import { swagger } from "./src/plugins/swagger";
-import { typescript } from "./src/plugins/typescript";
-import { markdown } from "./src/plugins/markdown";
-import { svelte } from "./src/plugins/svelte";
+import { swagger } from "./plugins/swagger";
+import { markdown } from "./plugins/markdown";
+import { svelte } from "./plugins/svelte";
 
 export default {
-    port: 4000,
+    port: 3000,
     // @ts-ignore yes there is import.meta.dir
-    rootDirectory: import.meta.dir + "/public",
-
-    // TODO: cache needs implementation
-    cache: true,
+    rootDirectory: import.meta.dir,
     
     routes: {
         // if your route is /index.html the route will change to / and the file will be index.html
         fileName: "index"
     },
 
-    ws: {
-        enable: true
-    },
-
-    plugins: [swagger("/swag/"), typescript(), markdown(), svelte()]
+    plugins: [swagger("/swag/"), markdown(), svelte()]
 }

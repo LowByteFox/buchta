@@ -1,59 +1,76 @@
 import { existsSync, mkdirSync, writeFileSync } from "fs";
+import { basename } from "path";
+import { chdir, exit } from "process";
+const VFS = require("./templateVFS").default;
 
-const basePath = process.cwd();
+let basePath = process.cwd();
+const templates = Object.keys(VFS).slice(1);
+let current: string | null = null;
 
-writeFileSync(basePath + "/buchta.config.ts", `
-export default {
-    port: 3000,
-    
-    // @ts-ignore yes there is import.meta.dir
-    rootDirectory: import.meta.dir + "/public",
-
-    cache: true,
-    
-    routes: {
-        // if your route is /index.html the route will change to / and the file will be index.html
-        fileName: "index"
+while (!current) {
+    console.clear();
+    current = prompt("Type name of project: ");
+    if (current?.includes("/")) {
+        console.log("/ in project name is not allowed!");
+        continue;
+    } 
+    if (existsSync(basePath + "/" + current)) {
+        console.log(`Directory with name "${current}" exists! Specify a new name!`);
     }
 }
-`);
 
-if (!existsSync(basePath + "/public"))
-    mkdirSync(basePath + "/public");
+mkdirSync(basePath + "/" + current);
+chdir(basePath + "/" + current);
+basePath += "/" + current;
 
-if (!existsSync(basePath + "/public/api"))
-    mkdirSync(basePath + "/public/api");
-
-writeFileSync(basePath + "/public/index.html", `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Buchta</title>
-</head>
-<body>
-    <h1>Hello World!</h1>
-</body>
-</html>
-`);
-
-writeFileSync(basePath + "/public/api/get.server.ts", `
-import { Request, Response } from "buchta";
-
-export default function (req: Request, res: Response) {
-    res.send("Hello World!");
+while (current && !templates.includes(current)) {
+    console.log("List of current available templates: \n");
+    console.log(templates.join(" "));
+    current = prompt("\nPlease type project template: ");
 }
-`);
 
-writeFileSync(basePath + "/public/api/post.server.ts", `
-import { Request, Response } from "buchta";
+if (current == null) exit(1);
 
-export default function (req: Request, res: Response) {
-    const query = {};
-    for (const key of req.query.keys()) {
-        query[key] = req.query.get(key);
+for (const i in VFS["base"]) {
+    if (i == "dirs") {
+        VFS["base"][i].forEach(dir => {
+            if (!existsSync(basePath + dir))
+                mkdirSync(basePath + dir)
+        });
+    } else {
+        const output = VFS["base"][i](basename(basePath));
+        if (!existsSync(basePath + i)) {
+            writeFileSync(basePath + i, output);
+        } else {
+            if (process.argv.includes("--force")) {
+                writeFileSync(basePath + i, output);
+            } else {
+                console.log(`File ${basePath + i} exists, skipping; use --force to overwrite`);
+            }
+        }
     }
-    res.sendJson(query);
 }
-`);
+
+for (const i in VFS[current]) {
+    if (i == "dirs") {
+        VFS[current][i].forEach(dir => {
+            if (!existsSync(basePath + dir))
+                mkdirSync(basePath + dir)
+        });
+    } else {
+        const output = VFS[current][i](basename(basePath));
+        if (!existsSync(basePath + i)) {
+            writeFileSync(basePath + i, output);
+        } else {
+            if (process.argv.includes("--force")) {
+                writeFileSync(basePath + i, output);
+            } else {
+                console.log(`File ${basePath + i} exists, skipping; use --force to overwrite`);
+            }
+        }
+    }
+}
+
+console.log(`\nCreate basic project structure from "${current}" template.`);
+console.log(`\n\nGet started: \ncd ${basename(basePath)} && bun install`);
+console.log("\nTo start server execute: bun run buchta serve");

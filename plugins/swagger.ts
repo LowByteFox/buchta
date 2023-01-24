@@ -1,6 +1,6 @@
-import { Buchta } from "../buchta";
-import { BuchtaRequest } from "../request";
-import { BuchtaResponse } from "../response";
+import { Buchta } from "../src/buchta";
+import { BuchtaRequest } from "../src/request";
+import { BuchtaResponse } from "../src/response";
 
 /**
  * Swagger plugin for Buchta

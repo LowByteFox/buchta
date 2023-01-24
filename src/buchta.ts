@@ -1,14 +1,16 @@
 import { Router, route } from "./router";
 import { BuchtaRequest } from "./request";
 import { BuchtaResponse } from "./response";
+import { BuchtaBundler } from "./bundler";
 
 import { readdir } from "fs/promises";
 import { resolve } from "path";
-import { BuchtaBundler } from "./bundler";
+import { existsSync, readFileSync } from "fs";
 
 export class Buchta {
     [x: string]: any;
     private router: Router;
+    private templater = new Map<string, string>();
     private config: any;
     bundler: BuchtaBundler;
     port: number;
@@ -59,10 +61,10 @@ export class Buchta {
         (async () => {
             if (this.config) {
                 if (!this.config.rootDirectory) return;
-                const root = this.config.rootDirectory;
+                const root = `${this.config.rootDirectory}/public`;
                 const files = await this.getFiles(root);
                 const methods = ["get", "post", "put", "delete"];
-                this.bundler = new BuchtaBundler(this.config.rootDirectory);
+                this.bundler = new BuchtaBundler(root);
                 this.bundler.prepare();
                 for (const file of files) {
                     const route = file.substring(root.length).replace("[", ":").replace("]", "");
@@ -112,6 +114,15 @@ export class Buchta {
                 this.bundler.bundle();
                 this.bundler.build(this);
             }
+
+            const templateDir = `${this.config.rootDirectory}/templates`;
+            if (existsSync(templateDir)) {
+                const templates = await this.getFiles(templateDir);
+                templates.forEach(template => {
+                    const file = template.replace(templateDir, "").slice(1);
+                    this.templater.set(file, readFileSync(template, {encoding: "utf-8"}));
+                });
+            }
         })();
     }
 
@@ -119,7 +130,7 @@ export class Buchta {
      * Add a callback that will get executed after the route has been registered
      * @param {Function} callback - The function
      */
-   assignAfterRouting(callback: Function) {
+    assignAfterRouting(callback: Function) {
         this.afterRouting.push(callback);
     }
 
@@ -130,6 +141,15 @@ export class Buchta {
      */
     assignExtHandler(ext: string, callback: Function) {
         this.fextHandlers.set(ext, callback);
+    }
+
+    /**
+     * Get template that can be used in plugin
+     * @param {string} name - name of file, for example `svelte.html`
+     * Returns content of `name` template stored in `templates` directory
+     */
+    getTemplate(name: string) {
+        return this.templater.get(name);
     }
 
     /**
@@ -257,5 +277,5 @@ export class Buchta {
 }
 
 export function get_version() {
-    return "0.4.25";
+    return "0.4.3";
 }

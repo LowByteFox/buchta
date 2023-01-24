@@ -70,9 +70,9 @@ export class BuchtaBundler {
     bundle() {
         spawnSync(["bun", "bun", ...this.files, ...this.customImports]);
         if (!existsSync(`${process.cwd()}/node_modules.bun`)) return;
-        const { stdout, stderr } = spawnSync([`${process.cwd()}/node_modules.bun`]);
-        this.bundleCode = stdout.toString();
+        const { stdout, stderr } = spawnSync(["bun", `${process.cwd()}/node_modules.bun`]);
         console.log(stderr.toString());
+        this.bundleCode = stdout.toString();
     }
     
     /**
