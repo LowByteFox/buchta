@@ -23,38 +23,9 @@ bun run src/example.ts
 # open browser and type localhost:4000/
 ```
 
-### Changes
-* Svelte
+### Changelong
+* Preact with SSR
 
-if you want customized html page for svetle base, create directory templates and add `svelte.html`
-Content of `svelte.html` should look like this
-```html
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Buchta Svelte Template</title>
-</head>
-<body>
-    
-</body>
-<!-- code -->
-</html>
-```
-The `<!-- code -->` must be there!
+Buchta now has `Preact` plugin with SSR support!
 
-* Plugins
-
-Plugin directory was changed, now only "buchta/plugins/..."
-
-* Config
-
-Change `rootDirectory` value to just `import.meta.dir`, remove `+ "/public"`
-it should look like this
-`rootDirectory: import.meta.dir`
-
-* Bugs?
-
-Pretty sure some yes, but idk which
+SSR Support is still experimental.

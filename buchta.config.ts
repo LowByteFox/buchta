@@ -1,6 +1,7 @@
 import { swagger } from "./plugins/swagger";
 import { markdown } from "./plugins/markdown";
 import { svelte } from "./plugins/svelte";
+import { preact } from "./plugins/preact";
 
 export default {
     port: 3000,
@@ -12,5 +13,8 @@ export default {
         fileName: "index"
     },
 
-    plugins: [swagger("/swag/"), markdown(), svelte()]
+    plugins: [swagger("/swag/"), markdown(), svelte(), preact({
+        ssr: true,
+        tsx: true
+    })]
 }
