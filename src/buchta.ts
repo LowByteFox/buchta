@@ -47,11 +47,13 @@ export class Buchta {
         if (!config) {
             try {
                 this.config = require(process.cwd() + "/buchta.config.ts").default;
-            } catch (e) { }
+            } catch (e) {
+                console.log(e);
+            }
         } else {
             this.config = config;
         }
-        
+
         if (this.config?.ws?.enable) {
             this.enableWs = this.config.ws.enable;
         }
