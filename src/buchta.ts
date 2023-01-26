@@ -4,7 +4,7 @@ import { BuchtaResponse } from "./response";
 import { BuchtaBundler } from "./bundler";
 
 import { readdir } from "fs/promises";
-import { resolve } from "path";
+import { basename, dirname, resolve } from "path";
 import { existsSync, readFileSync } from "fs";
 
 export class Buchta {
@@ -26,7 +26,7 @@ export class Buchta {
     put: route;
     delete: route;
 
-    constructor() {
+    constructor(config?) {
         this.router = new Router();
         const methods = ["get", "post", "put", "delete"];
         for (const method of methods) {
@@ -44,10 +44,14 @@ export class Buchta {
             };
         }
 
-        try {
-            this.config = require(process.cwd() + "/buchta.config.ts").default;
-        } catch (e) { }
-
+        if (!config) {
+            try {
+                this.config = require(process.cwd() + "/buchta.config.ts").default;
+            } catch (e) { }
+        } else {
+            this.config = config;
+        }
+        
         if (this.config?.ws?.enable) {
             this.enableWs = this.config.ws.enable;
         }
@@ -60,6 +64,7 @@ export class Buchta {
 
         (async () => {
             if (this.config) {
+                const mids = [];
                 if (!this.config.rootDirectory) return;
                 const root = `${this.config.rootDirectory}/public`;
                 const files = await this.getFiles(root);
@@ -77,7 +82,7 @@ export class Buchta {
                             res.sendFile(file);
                         });
                     } else if (ext == "js" || ext == "ts") {
-                        const filename = splited.join(".").split("/").pop();
+                        const filename = basename(route);
                         const start = filename.split(".").shift();
                         const method = methods.find(m => m == start);
                         if (method) {
@@ -91,6 +96,16 @@ export class Buchta {
                                 else
                                     module.default(req, res);
                             }, module.data);
+
+                            if (module.before) {
+                                this.router.addBefore(dirname(route), method, module.before, true);
+                            }
+                            if (module.after) {
+                                this.router.addAfter(dirname(route), method, module.after, true);
+                            }
+
+                        } else if (filename.startsWith("middleware")) {
+                            mids.push([file, route]);
                         } else {
                             this.bundler.addFile(file);
                             if (this.fextHandlers.has(ext)) {
@@ -111,6 +126,19 @@ export class Buchta {
                         }
                     }
                 }
+
+                for (const element of mids) {
+                    const module = await import(element[0]);
+                    methods.forEach(m => {
+                        if (module.before) {
+                            this.router.addBefore(dirname(element[1]), m, module.before, false);
+                        }
+                        if (module.after) {
+                            this.router.addAfter(dirname(element[1]), m, module.after, false);
+                        }
+                    });
+                }
+
                 this.bundler.bundle();
                 this.bundler.build(this);
             }
@@ -216,7 +244,7 @@ export class Buchta {
 
     /**
      * Run the server
-     * @param {number} [serverPort=3000] - port on which will the server run
+     * @param {number} [serverPort=3000] - p    ort on which will the server run
      * @param {Function} [func=undefined] - function that will run after the server has started
      */
     run = (serverPort: number = 3000, func?: Function, server = this) => {
@@ -235,7 +263,7 @@ export class Buchta {
                         fun(ws);
                     }
                 },
-                message: (ws: WebSocket, msg: String) => {
+                message: (ws: WebSocket, msg: string) => {
                     for (const fun of this.wsMessage) {
                         fun(ws, msg);
                     }
@@ -253,15 +281,29 @@ export class Buchta {
             async fetch(req: BuchtaRequest, wsServer: any = null): Promise<Response> {
                 if (wsServer?.upgrade(req)) return;
                 const temp = new URL(req.url);
-                const routeFunc = server.router.handle(temp.pathname, req.method.toLowerCase());
+                const route = server.router.handle(temp.pathname, req.method.toLowerCase());
+                if (!route) return new Response("404");
+                const routeFunc = route.f;
                 req.params = server.router.params;
                 req.query = temp.searchParams;
                 const buchtaRes = new BuchtaResponse();
+
                 if (routeFunc) {
-                    if (routeFunc.constructor.name == "AsyncFunction")
-                        await routeFunc(req, buchtaRes);
-                    else
-                        routeFunc(req, buchtaRes);
+                    let res;
+
+                    if (route.b) {
+                        res = route.b(req, buchtaRes);
+                        if (res?.then) await res;
+                    }
+
+                    res = routeFunc(req, buchtaRes);
+                    if (res?.then) await res;
+
+                    if (route.a) {
+                        res = route.a(req, buchtaRes);
+                        if (res?.then) await res;
+                    }
+
                     return buchtaRes.buildResponse();
                 }
                 return new Response("404\n");

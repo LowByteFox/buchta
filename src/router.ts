@@ -3,8 +3,14 @@ import { BuchtaResponse } from './response';
 
 export type route = (path: string, callback: (req: BuchtaRequest, res: BuchtaResponse) => void, ...data) => void;
 
+interface BuchtaRoute {
+    b: (req: BuchtaRequest, res: BuchtaResponse) => void,
+    f: (req: BuchtaRequest, res: BuchtaResponse) => void,
+    a: (req: BuchtaRequest, res: BuchtaResponse) => void,
+}
+
 export class Router {
-    routes: Map<string, (req: BuchtaRequest, res: BuchtaResponse) => void> = new Map();
+    routes: Map<string, BuchtaRoute> = new Map();
     preParams: Map<string, Map<string, number>> = new Map();
     params: Map<string, string> = new Map();
 
@@ -25,7 +31,7 @@ export class Router {
                         this.preParams.set(regex, map);
                     }
                 })
-                this.routes.set(regex, handler);
+                this.routes.set(regex, {a: null, b: null, f: handler});
             };
         }
     }
@@ -37,7 +43,37 @@ export class Router {
         return path;
     }
 
-    handle(path: string, method: string): (req: BuchtaRequest, res: BuchtaResponse) => void {
+    addBefore(route: string, method: string, callback: (req: BuchtaRequest, res: BuchtaResponse) => void, force: boolean) {
+        let regex = `${method}/${this.healRoute(route)}`;
+
+        const data = this.routes.get(regex);
+        if (!data) return;
+
+        if (data.b && force) {
+            data.b = callback;
+        }
+
+        if (!data.b) {
+            data.b = callback;
+        }
+    }
+
+    addAfter(route: string, method: string, callback: (req: BuchtaRequest, res: BuchtaResponse) => void, force: boolean) {
+        let regex = `${method}/${this.healRoute(route)}`;
+
+        const data = this.routes.get(regex);
+        if (!data) return;
+
+        if (data.a && force) {
+            data.a = callback;
+        }
+
+        if (!data.a) {
+            data.a = callback;
+        }
+    }
+
+    handle(path: string, method: string): BuchtaRoute {
         path = `${method}/${this.healRoute(path)}`;
         for (const [route, handler] of this.routes) {
             const routeParts = route.split("/");
