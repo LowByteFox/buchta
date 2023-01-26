@@ -26,7 +26,7 @@ export class Buchta {
     put: route;
     delete: route;
 
-    constructor(config?) {
+    constructor(options: { config?: any }) {
         this.router = new Router();
         const methods = ["get", "post", "put", "delete"];
         for (const method of methods) {
@@ -44,14 +44,11 @@ export class Buchta {
             };
         }
 
-        if (!config) {
-            try {
-                this.config = require(process.cwd() + "/buchta.config.ts").default;
-            } catch (e) {
-                console.log(e);
-            }
-        } else {
-            this.config = config;
+        try {
+            // https://discord.com/channels/876711213126520882/876711213126520885/1068212765539442818
+            this.config = require(process.cwd() + "/buchta.config.ts").default;
+        } catch (e) {
+            console.log(e);
         }
 
         if (this.config?.ws?.enable) {
