@@ -26,7 +26,7 @@ export class Buchta {
     put: route;
     delete: route;
 
-    constructor(options: { config?: any }) {
+    constructor(config?: any) {
         this.router = new Router();
         const methods = ["get", "post", "put", "delete"];
         for (const method of methods) {
@@ -46,7 +46,7 @@ export class Buchta {
 
         try {
             // https://discord.com/channels/876711213126520882/876711213126520885/1068212765539442818
-            this.config = require(process.cwd() + "/buchta.config.ts").default;
+            this.config = config ?? require(process.cwd() + "/buchta.config.ts").default;
         } catch (e) {
             console.log(e);
         }
