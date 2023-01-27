@@ -23,7 +23,7 @@ bun run src/example.ts
 # open browser and type localhost:4000/
 ```
 
-### Changelong
+### Changelog
 * Preact with SSR
 
 Buchta now has `Preact` plugin with SSR support!
