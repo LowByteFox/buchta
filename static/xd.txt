@@ -1,0 +1,1 @@
+I am example file that should be static

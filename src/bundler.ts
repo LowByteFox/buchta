@@ -1,5 +1,5 @@
 // @ts-ignore bun issues
-import { file, spawnSync } from "bun";
+import { spawnSync } from "bun";
 import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "fs";
 import { dirname } from "path";
 import { Buchta } from "./buchta";

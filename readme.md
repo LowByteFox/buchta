@@ -41,3 +41,12 @@ function names - `before` and `after`
 * BuchtaSubrouter
 
 Simplify adding routes using subrouter
+
+* Code Refactor
+
+Source code should be easier to read even without comments
+
+* Directories
+
+`static`, directory that holds all static content, such as images, videos, etc
+`middleware`, directory that holds all middleware for routes

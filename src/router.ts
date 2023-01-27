@@ -78,10 +78,10 @@ export class Router {
         for (const [route, handler] of this.routes) {
             const routeParts = route.split("/");
             const pathParts = path.split("/");
-            if (routeParts.length != pathParts.length) {
-                continue;
-            }
-            if (path.match(route.replace(/:[^\s/]+/g, ".+"))) {
+
+            if (routeParts.length != pathParts.length) continue;
+            
+            if (path.match(route.replace(/:[^\s/]+/, ".+"))) {
                 const map = this.preParams.get(route);
                 if (!map) return handler;
                 this.params.clear();

@@ -7,6 +7,7 @@ import { readdir } from "fs/promises";
 import { basename, dirname, resolve } from "path";
 import { existsSync, readFileSync } from "fs";
 import { BuchtaSubrouter } from "./subrouter";
+import { colors, customLog } from "./colors";
 
 export class Buchta {
     [x: string]: any;
@@ -46,7 +47,6 @@ export class Buchta {
         }
 
         try {
-            // https://discord.com/channels/876711213126520882/876711213126520885/1068212765539442818
             this.config = config ?? require(process.cwd() + "/buchta.config.ts").default;
         } catch (e) {
             console.log(e);
@@ -61,97 +61,138 @@ export class Buchta {
                 this.mixInto(plugin);
             }
         }
+        
+        (async (methods) => {
+            await this.autoLoad(methods);
+        })(methods);
+    }
 
-        (async () => {
-            if (this.config) {
-                const mids = [];
-                if (!this.config.rootDirectory) return;
-                const root = `${this.config.rootDirectory}/public`;
-                const files = await this.getFiles(root);
-                const methods = ["get", "post", "put", "delete"];
-                this.bundler = new BuchtaBundler(root);
-                this.bundler.prepare();
-                for (const file of files) {
-                    const route = file.substring(root.length).replace("[", ":").replace("]", "");
-                    const splited = route.split(".");
-                    const base = splited[0];
-                    const ext = splited[splited.length - 1];
-                    const ending = this.config.routes?.fileName || "index";
-                    if (base.endsWith(ending) && ext == "html") {
-                        this.get(base.substring(0, base.length - ending.length), (req, res) => {
-                            res.sendFile(file);
-                        });
-                    } else if (ext == "js" || ext == "ts") {
-                        const filename = basename(route);
-                        const start = filename.split(".").shift();
-                        const method = methods.find(m => m == start);
-                        if (method && filename.includes("server")) {
-                            const temp = splited.join(".").split("/");
-                            temp.pop();
-                            const module = await import(file);
+    async autoLoad(methods) {
+        if (this.config) {
+            if (!this.config.rootDirectory) return;
+            const rootDir = this.config.rootDirectory + "/public";
+            const rootDirFiles = await this.getFiles(rootDir);
+            this.bundler = new BuchtaBundler(rootDir);
+            this.bundler.prepare();
+            rootDirFiles.forEach(async file => {
+                const route = file.substring(rootDir.length).replace("[", ":").replace("]", "");
+                const shortenedFile  = basename(route);
+                await this.handleFile(shortenedFile, route, file, methods);
+            });
 
-                            this[method](temp.join("/"), async (req, res) => {
-                                if (module.default.constructor.name == "AsyncFunction")
-                                    await module.default(req, res);
-                                else
-                                    module.default(req, res);
-                            }, module.data);
-
-                            if (module.before) {
-                                this.router.addBefore(dirname(route), method, module.before, true);
-                            }
-                            if (module.after) {
-                                this.router.addAfter(dirname(route), method, module.after, true);
-                            }
-
-                        } else if (filename.startsWith("middleware")) {
-                            mids.push([file, route]);
-                        } else {
-                            this.bundler.addFile(file);
-                            if (this.fextHandlers.has(ext)) {
-                                this.fextHandlers.get(ext)?.(route, file);
-                            } else {
-                                this.get(route, (_req, res) => {
-                                    res.sendFile(file);
-                                });
-                            }
-                        }
-                    } else {
-                        if (this.fextHandlers.has(ext)) {
-                            this.fextHandlers.get(ext)?.(route, file);
-                        } else {
-                            this.get(route, (_req, res) => {
-                                res.sendFile(file);
-                            });
-                        }
-                    }
-                }
-
-                for (const element of mids) {
-                    const module = await import(element[0]);
-                    methods.forEach(m => {
-                        if (module.before) {
-                            this.router.addBefore(dirname(element[1]), m, module.before, false);
-                        }
-                        if (module.after) {
-                            this.router.addAfter(dirname(element[1]), m, module.after, false);
-                        }
-                    });
-                }
-
-                this.bundler.bundle();
-                this.bundler.build(this);
-            }
+            this.bundler.bundle();
+            this.bundler.build(this);
 
             const templateDir = `${this.config.rootDirectory}/templates`;
             if (existsSync(templateDir)) {
-                const templates = await this.getFiles(templateDir);
-                templates.forEach(template => {
-                    const file = template.replace(templateDir, "").slice(1);
+                const templateDirFiles = await this.getFiles(templateDir);
+                templateDirFiles.forEach(template => {
+                    const file = template.slice(templateDir.length + 1);
                     this.templater.set(file, readFileSync(template, {encoding: "utf-8"}));
+                })
+            }
+
+            await this.handleMiddlewares(this.config.rootDirectory + "/middleware", methods);
+            await this.handleStaticFiles(this.config.rootDirectory + "/static");
+        }
+    }
+
+    async handleMiddlewares(path: string, methods: string[]) {
+        if (!existsSync(path)) return;
+        const files = await this.getFiles(path);
+
+        files.forEach(async file => {
+            const route = dirname(file.slice(path.length));
+
+            const module = await import(file);
+
+            methods.forEach(method => {
+                if (module.before) this.router.addBefore(route, method, module.before, false);
+                if (module.after) this.router.addAfter(route, method, module.after, false);
+            })
+        })
+    }
+
+    async handleStaticFiles(path: string) {
+        if (!existsSync(path)) return;
+        const files = await this.getFiles(path);
+
+        files.forEach(file => {
+            const route = file.slice(path.length);
+            
+            this.get(route, (_req: BuchtaRequest, res: BuchtaResponse) => {
+                res.sendFile(file);
+            });
+        })
+    }
+
+    async handleFile(filename: string, route: string, path: string, methods: string[]) {
+        const routeIndex = this.config?.routes?.fileName || "index";
+        const extension = filename.split(".").pop();
+        if (filename.startsWith(routeIndex) && filename.endsWith(".html")) {
+            this.get(dirname(route), (_req, res) => {
+                res.sendFile(path);
+            });
+        } else if (filename.endsWith(".js") || filename.endsWith(".ts")) {
+            if (filename.match(/.+\.server\.(ts|js)/)) {
+                await this.handleServerFunction(filename, path, methods, route);
+            } else {
+                if (filename.startsWith("middleware")) {
+                    this.WARN(`File 'public${route}' should be in 'middleware' directory, ignoring`);
+                    return;
+                }
+
+                this.bundler.addFile(path);
+                this.get(route, (_req, res) => {
+                    res.sendFile(path);
                 });
             }
-        })();
+        } else {
+            if (this.fextHandlers.has(extension)) {
+                this.fextHandlers.get(extension)?.(route, path);
+            } else {
+                this.WARN(`File 'public${route}' should be in 'static' directory\n`);
+                this.get(route, (_req, res) => {
+                    res.sendFile(path);
+                });
+            }
+        }
+    }
+
+    private WARN(str: string) {
+        customLog([colors.bold, colors.white], "[ ");
+        customLog([colors.bold, colors.yellow], "WARN");
+        customLog([colors.bold, colors.white], " ]: ");
+        customLog([colors.bold, colors.white], str);
+    }
+
+    async handleServerFunction(filename: string, path: string, methods: string[], route: string) {
+        const firstPart = filename.split(".").shift();
+        const method = methods.find(m => m == firstPart);
+        if (method) {
+            const module = await import(path);
+            if (!module.default) return;
+
+            const func = module?.default;
+
+            if (func.constructor.name == "AsyncFunction") {
+                this[method](dirname(route), async (req: BuchtaRequest, res: BuchtaRequest) => {
+                    await func(req, res);
+                });
+            } else {
+                this[method](dirname(route), (req: BuchtaRequest, res: BuchtaResponse) => {
+                    func(req, res);
+                });
+            }
+
+            if (module.before) {
+                this.router.addBefore(dirname(route), method, module.before, true);
+            }
+
+            if (module.after) {
+                this.router.addAfter(dirname(route), method, module.after, true);
+            }
+        }
     }
 
     /**
@@ -222,7 +263,7 @@ export class Buchta {
      * Add function that will be trigerred when websockets recieves message
      * @param {(ws: WebSocket, msg: String) => void} func - the function
      */
-    wsOnMessage(func: (ws: WebSocket, msg: String) => void) {
+    wsOnMessage(func: (ws: WebSocket, msg: string) => void) {
         this.wsMessage.push(func);
     }
 
@@ -252,65 +293,61 @@ export class Buchta {
      * @param {Function} [func=undefined] - function that will run after the server has started
      */
     run = (serverPort: number = 3000, func?: Function, server = this) => {
-        server.port = serverPort;
-        if (this.config?.port) {
-            serverPort = this.config.port;
-            server.port = serverPort;
-        }
-        let ws: any;
-        if (!this.enableWs) {
-            ws = null;
-        } else {
-            ws = {
-                open: (ws: WebSocket) => {
-                    for (const fun of this.wsOpen) {
-                        fun(ws);
-                    }
-                },
-                message: (ws: WebSocket, msg: string) => {
-                    for (const fun of this.wsMessage) {
-                        fun(ws, msg);
-                    }
-                },
-                close: (ws: WebSocket) => {
-                    for (const fun of this.wsClose) {
-                        fun(ws);
-                    }
+        server.port = this.config?.port || serverPort;
+
+        let ws = {
+            open: (ws: WebSocket) => {
+                for (const fun of this.wsOpen) {
+                    fun(ws);
                 }
-            };
-        }
+            },
+            message: (ws: WebSocket, msg: string) => {
+                for (const fun of this.wsMessage) {
+                    fun(ws, msg);
+                }
+            },
+            close: (ws: WebSocket) => {
+                for (const fun of this.wsClose) {
+                    fun(ws);
+                }
+            }
+        };
 
         Bun.serve({
             // @ts-ignore wsServer bun-types issues
             async fetch(req: BuchtaRequest, wsServer: any = null): Promise<Response> {
                 if (wsServer?.upgrade(req)) return;
-                const temp = new URL(req.url);
-                const route = server.router.handle(temp.pathname, req.method.toLowerCase());
-                if (!route) return new Response("404");
-                const routeFunc = route.f;
+                
+                let path = decodeURI(req.url.match(/\d(?=\/).+/)[0].slice(1));
+                let route;
+
+                if (!path.includes("?")) {
+                    route = server.router.handle(path, req.method.toLowerCase());
+                } else {
+                    const splited = path.split("?");
+
+                    route = server.router.handle(splited[0], req.method.toLowerCase());
+                    req.query = server.parseQuery(splited[1]);
+                }
+                
+                if (!route)
+                    return new Response("404");
                 req.params = server.router.params;
-                req.query = temp.searchParams;
+
                 const buchtaRes = new BuchtaResponse();
 
-                if (routeFunc) {
-                    let res;
+                let res: any;
 
-                    if (route.b) {
-                        res = route.b(req, buchtaRes);
-                        if (res?.then) await res;
-                    }
+                res = route.b?.(req, buchtaRes);
+                if (res?.then) await res;
 
-                    res = routeFunc(req, buchtaRes);
-                    if (res?.then) await res;
+                res = route.f(req, buchtaRes);
+                if (res?.then) await res;
 
-                    if (route.a) {
-                        res = route.a(req, buchtaRes);
-                        if (res?.then) await res;
-                    }
+                res = route.a?.(req, buchtaRes);
+                if (res?.then) await res;
 
-                    return buchtaRes.buildResponse();
-                }
-                return new Response("404\n");
+                return buchtaRes.buildResponse();
             },
             port: serverPort,
             development: true,
@@ -319,6 +356,18 @@ export class Buchta {
         });
         console.log(`Buchta entered oven and met Bun. Both of them started talking about HTTP on port ${serverPort}`);
         func?.();
+    }
+
+    parseQuery(path: string) {
+        const query = new Map<string, string>();
+        const splited = path.split("&");
+        splited.forEach(part => {
+            const spaced = part.split("=");
+            if (!query.has(spaced[0]))
+                query.set(spaced[0], spaced[1]);
+        })
+
+        return query;
     }
 }
 
