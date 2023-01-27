@@ -48,5 +48,5 @@ Source code should be easier to read even without comments
 
 * Directories
 
-`static`, directory that holds all static content, such as images, videos, etc
+`static`, directory that holds all static content, such as images, videos, etc <br>
 `middleware`, directory that holds all middleware for routes
