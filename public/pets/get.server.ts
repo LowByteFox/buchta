@@ -1,8 +1,6 @@
 import { BuchtaRequest } from "../../src/request";
 import { BuchtaResponse } from "../../src/response";
 
-// function that will be run by the server
-// because the name starts with `get`, it will be run on GET requests
 export default function (req: BuchtaRequest, res: BuchtaResponse) {
     res.send(`I am ${req.query.get("name")}\n`);
 }

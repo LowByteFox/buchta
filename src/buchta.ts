@@ -6,6 +6,7 @@ import { BuchtaBundler } from "./bundler";
 import { readdir } from "fs/promises";
 import { basename, dirname, resolve } from "path";
 import { existsSync, readFileSync } from "fs";
+import { BuchtaSubrouter } from "./subrouter";
 
 export class Buchta {
     [x: string]: any;
@@ -84,7 +85,7 @@ export class Buchta {
                         const filename = basename(route);
                         const start = filename.split(".").shift();
                         const method = methods.find(m => m == start);
-                        if (method) {
+                        if (method && filename.includes("server")) {
                             const temp = splited.join(".").split("/");
                             temp.pop();
                             const module = await import(file);
@@ -239,6 +240,10 @@ export class Buchta {
      */
     wsOnClose(func: (ws: WebSocket) => void) {
         this.wsClose.push(func);
+    }
+
+    use(path: string, router: BuchtaSubrouter) {
+        router.putInto(this, path);       
     }
 
     /**

@@ -29,3 +29,15 @@ bun run src/example.ts
 Buchta now has `Preact` plugin with SSR support!
 
 SSR Support is still experimental.
+
+* 2-Way middleware
+
+you can apply middlware in 2 ways<br>
+1. add it to *.server.ts<br>
+2. create middleware.ts file<br>
+
+function names - `before` and `after`
+
+* BuchtaSubrouter
+
+Simplify adding routes using subrouter
