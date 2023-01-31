@@ -1,9 +1,7 @@
-# Buchta ( back on track )
-## Dynamic Web Framework
+# Buchta
+## Full Stack Framework
 
 <img src="./buchta.png" alt="Buchta Logo" width="256"/>
-
-### Buchta is now back on track, this week will be lit!
 
 ## Get Started
 
@@ -50,3 +48,7 @@ Source code should be easier to read even without comments
 
 `static`, directory that holds all static content, such as images, videos, etc <br>
 `middleware`, directory that holds all middleware for routes
+
+* Live reload is here!
+
+Just update one of files in `public` directory and your page should be reloaded automatically

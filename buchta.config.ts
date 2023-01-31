@@ -2,6 +2,7 @@ import { swagger } from "./plugins/swagger";
 import { markdown } from "./plugins/markdown";
 import { svelte } from "./plugins/svelte";
 import { preact } from "./plugins/preact";
+import { livereload } from "./plugins/livereload";
 
 export default {
     port: 3000,
@@ -16,5 +17,5 @@ export default {
     plugins: [swagger("/swag/"), markdown(), svelte(), preact({
         ssr: true,
         tsx: true
-    })]
+    }), livereload()]
 }

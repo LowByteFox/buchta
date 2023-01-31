@@ -8,6 +8,7 @@ import { basename, dirname, resolve } from "path";
 import { existsSync, readFileSync } from "fs";
 import { BuchtaSubrouter } from "./subrouter";
 import { colors, customLog } from "./colors";
+import { fswatch } from "./fswatch";
 
 export class Buchta {
     [x: string]: any;
@@ -78,6 +79,17 @@ export class Buchta {
                 const route = file.substring(rootDir.length).replace("[", ":").replace("]", "");
                 const shortenedFile  = basename(route);
                 await this.handleFile(shortenedFile, route, file, methods);
+                if (this.livereload) {
+                    fswatch(file, null, async () => {
+                        await this.handleFile(shortenedFile, route, file, methods);
+                        this.bundler.bundle(true);
+                        this.bundler.build(this, true);
+                        
+                        this.livereload.clients.forEach(client => {
+                            client.send("YEEET!");
+                        })
+                    });
+                }
             });
 
             this.bundler.bundle();
@@ -130,9 +142,25 @@ export class Buchta {
         const routeIndex = this.config?.routes?.fileName || "index";
         const extension = filename.split(".").pop();
         if (filename.startsWith(routeIndex) && filename.endsWith(".html")) {
-            this.get(dirname(route), (_req, res) => {
-                res.sendFile(path);
-            });
+            if (this.livereload) {
+                let content = readFileSync(path, {encoding: "utf-8"});
+                content += `
+                <script>
+                let socket = new WebSocket("ws://localhost:${this.getPort()}");
+
+                socket.onmessage = (e) => { if (e.data == "YEEET!") window.location.reload(); }
+                </script>
+                `;
+
+                this.get(dirname(route), (_req, res) => {
+                    res.send(content);
+                    res.setHeader("content-type", "text/html");
+                });
+            } else {
+                this.get(dirname(route), (_req, res) => {
+                    res.sendFile(path);
+                });
+            }
         } else if (filename.endsWith(".js") || filename.endsWith(".ts")) {
             if (filename.match(/.+\.server\.(ts|js)/)) {
                 await this.handleServerFunction(filename, path, methods, route);

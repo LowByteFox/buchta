@@ -8,7 +8,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { basename, dirname } from "path";
 import { chdir } from "process";
 
-export function preact(buchtaPreact: any = {ssr: false}) {
+export function preact(buchtaPreact: any = { ssr: false }) {
 
     const opts = buchtaPreact;
 
@@ -17,14 +17,25 @@ export function preact(buchtaPreact: any = {ssr: false}) {
 
     function pageGen(this: Buchta, code: string, html: string) {
         const template = this.getTemplate("preact.html");
-        if (template)
-            return template.replace("<!-- html -->", () => html).replace("<!-- code -->", () => `
+        if (template) {
+            let output = template.replace("<!-- html -->", () => html).replace("<!-- code -->", () => `
 <script type="module">
 ${code}
 </script>
 `);
+            if (this.livereload) {
+                output += `
+                <script>
+                let socket = new WebSocket("ws://localhost:${this.getPort()}");
 
-        return `
+                socket.onmessage = (e) => { if (e.data == "YEEET!") window.location.reload(); }
+                </script>
+                `
+            }
+            return output;
+        }
+
+        let output = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -40,6 +51,16 @@ ${code}
 </script>
 </html>
 `
+            if (this.livereload) {
+                output += `
+                <script>
+                let socket = new WebSocket("ws://localhost:${this.getPort()}");
+
+                socket.onmessage = (e) => { if (e.data == "YEEET!") window.location.reload(); }
+                </script>
+                `
+            }
+            return output;
     }
 
     // hides file imports so that the bundler won't get confused
@@ -78,7 +99,7 @@ ${code}
         basePath += "pre-ssr";
 
         if (!existsSync(basePath + dirname(route))) {
-            mkdirSync(basePath + dirname(route), {recursive: true});
+            mkdirSync(basePath + dirname(route), { recursive: true });
         }
 
         // @ts-ignore It is there
@@ -93,7 +114,7 @@ ${code}
             chdir("../..");
         }
     }
-    
+
     function patchAfterBundle(this: Buchta, route: string, code: string) {
         if (patched.has(route)) {
             const obj = patched.get(route);
@@ -124,41 +145,43 @@ ${code}
     function handle(this: Buchta, route: string, file: string, ext: string) {
         const content = readFileSync(file, { encoding: "utf-8" });
 
-            // @ts-ignore It is there
-            const transpiler = new Bun.Transpiler({ loader: "tsx", 
-                                                    tsconfig: JSON.stringify({
-                                                        "compilerOptions": {
-                                                            "jsx": "react",
-                                                            "jsxFactory": "h",
-                                                            "jsxFragmentFactory": "Fragment",
-                                                        }
-                                                })});
-                                                
-            if (opts.ssr == undefined) throw new Error("ssr field in config is missing!");
-            let code;
-            if (opts.ssr) {
-                code = `import { h, hydrate, Fragment } from "preact";import render from "preact-render-to-string";\n${transpiler.transformSync(content, {})}\n`;
-            } else {
-                code = `import { h, hydrate, Fragment } from "preact";\n${transpiler.transformSync(content, {})}\n`;
-            }
-
-            // @ts-ignore It is there
-            code = hideJsxImports(route, code).replaceAll("jsxEl", "_jsxEl").replaceAll("JSXFrag", "_JSXFrag");
-
-            if (opts.ssr) {
-                preSSR(route, code, this.getDefaultFileName(), ext);
-            }
-
-            if (route.endsWith(`${this.getDefaultFileName()}${ext}`)) {
-                let route2 = route.substring(0, route.length - 4 - this.getDefaultFileName().length);
-
-                if (!route2.endsWith(ext)) {
-                    code += "\nhydrate(index(), document.body)\n";
+        // @ts-ignore It is there
+        const transpiler = new Bun.Transpiler({
+            loader: "tsx",
+            tsconfig: JSON.stringify({
+                "compilerOptions": {
+                    "jsx": "react",
+                    "jsxFactory": "h",
+                    "jsxFragmentFactory": "Fragment",
                 }
+            })
+        });
+
+        if (opts.ssr == undefined) throw new Error("ssr field in config is missing!");
+        let code;
+        if (opts.ssr) {
+            code = `import { h, hydrate, Fragment } from "preact";import render from "preact-render-to-string";\n${transpiler.transformSync(content, {})}\n`;
+        } else {
+            code = `import { h, hydrate, Fragment } from "preact";\n${transpiler.transformSync(content, {})}\n`;
+        }
+
+        // @ts-ignore It is there
+        code = hideJsxImports(route, code).replaceAll("jsxEl", "_jsxEl").replaceAll("JSXFrag", "_JSXFrag");
+
+        if (opts.ssr) {
+            preSSR(route, code, this.getDefaultFileName(), ext);
+        }
+
+        if (route.endsWith(`${this.getDefaultFileName()}${ext}`)) {
+            let route2 = route.substring(0, route.length - 4 - this.getDefaultFileName().length);
+
+            if (!route2.endsWith(ext)) {
+                code += "\nhydrate(index(), document.body)\n";
             }
-            
-            this.bundler.addCustomFile(route, `${route.replace(ext, ".js")}`, code);
-            this.bundler.addPatch(route, patchAfterBundle);
+        }
+
+        this.bundler.addCustomFile(route, `${route.replace(ext, ".js")}`, code);
+        this.bundler.addPatch(route, patchAfterBundle);
     }
 
     return function (this: Buchta) {

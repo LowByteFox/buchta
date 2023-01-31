@@ -11,7 +11,18 @@ export function markdown() {
     return function (this: Buchta) {
         this.assignExtHandler("md", (route: string, file: string) => {
             const content = readFileSync(file, {encoding: "utf-8"});
-            const html = marked.parse(content);
+            let html = marked.parse(content);
+
+            if (this.livereload) {
+                html += `
+                <script>
+                let socket = new WebSocket("ws://localhost:${this.getPort()}");
+
+                socket.onmessage = (e) => { if (e.data == "YEEET!") window.location.reload(); }
+                </script>
+                `
+            }
+
             if (route.endsWith(`${this.getDefaultFileName()}.md`))
                 route = route.substring(0, route.length - 3 - this.getDefaultFileName().length);
 

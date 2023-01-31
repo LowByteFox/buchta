@@ -15,12 +15,22 @@ export function svelte(compilerOptions: any = {}) {
     const opts = compilerOptions;
     const patched: Map<string, Array<string>> = new Map();
 
-    // TODO: Until Buchta v4.3, this function will have to exist to generate html
-    // What does it mean? Buchta v4.3 will have `template` directory for this kind of stuff
+
+    /*
+    if (this.livereload) {
+                html += `
+                <script>
+                let socket = new WebSocket("ws://localhost:${this.getPort()}");
+
+                socket.onmessage = (e) => { if (e.data == "YEEET!") window.location.reload(); }
+                </script>
+                `
+            }
+    */
     function svelteHTML(this: Buchta, code: string) {
         const template = this.getTemplate("svelte.html");
-        if (template)
-            return template.split("<!-- code -->").join(
+        if (template) {
+            let html = template.split("<!-- code -->").join(
                 `
 <script type="module">
 ${code}
@@ -29,9 +39,20 @@ new Component({
 });
 </script>
                 `
-            )
+            );
+            if (this.livereload) {
+                html += `
+                <script>
+                let socket = new WebSocket("ws://localhost:${this.getPort()}");
 
-        return `
+                socket.onmessage = (e) => { if (e.data == "YEEET!") window.location.reload(); }
+                </script>
+                `
+            }
+            return html;
+        }
+
+        let html = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -50,6 +71,17 @@ new Component({
 </script>
 </html>
 `
+        if (this.livereload) {
+            html += `
+    <script>
+    let socket = new WebSocket("ws://localhost:${this.getPort()}");
+
+    socket.onmessage = (e) => { if (e.data == "YEEET!") window.location.reload(); }
+    </script>
+    `
+        }
+
+        return html;
     }
 
     // hides file imports so that the bundler won't get confused
@@ -107,17 +139,6 @@ new Component({
             const code = hideSvelteImports(route, js.code);
             this.bundler.addCustomFile(route, `${route.replace(".svelte", ".js")}`, code);
             this.bundler.addPatch(route, patchAfterBundle);
-
-            if (route.endsWith(".svelte")) {
-                this.get(route, (_req: BuchtaRequest, res: BuchtaResponse) => {
-                    res.send(code);
-                    res.setHeader("Content-Type", "text/javascript");
-                });
-            } else {
-                this.get(route, (_req: BuchtaRequest, res: BuchtaResponse) => {
-                    res.setHeader("Content-Type", "text/html");
-                });
-            }
         });
     }
 }
