@@ -4,38 +4,68 @@ import { BuchtaResponse } from "../src/response";
 
 import { compile } from "svelte/compiler";
 
-import { readFileSync, writeFileSync } from "fs";
+// @ts-ignore It is there
+import { spawnSync } from "bun";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
+import { basename, dirname } from "path";
+import { chdir } from "process";
 
 /**
  * Svelte support for Buchta
- * @param {any} compilerOptions - options for the svelte compiler
+ * @param {any} buchtaSvelte - options for the svelte compiler
  */
-export function svelte(compilerOptions: any = {}) {
+export function svelte(buchtaSvelte: any = { ssr: false }) {
 
-    const opts = compilerOptions;
+    const opts = buchtaSvelte;
+
     const patched: Map<string, Array<string>> = new Map();
+    const htmls: Map<string, string | undefined> = new Map();
 
+    const preSSR = (route: string, code: string, defaultFileName: string) => {
+        if (patched.has(route)) {
+            const obj = patched.get(route);
+            let before = "";
+            if (obj)
+                for (const e of obj) {
+                    before += `${e}\n`;
+                }
+            code = `${before}\n${code}`;
+        }
+        // @ts-ignore It is there
+        code = code.replaceAll(".svelte", ".js");
+        let basePath = process.cwd() + "/.buchta/"
+        if (!existsSync(basePath + "pre-ssr")) {
+            mkdirSync(basePath + "pre-ssr");
+        }
 
-    /*
-    if (this.livereload) {
-                html += `
-                <script>
-                let socket = new WebSocket("ws://localhost:${this.getPort()}");
+        basePath += "pre-ssr";
 
-                socket.onmessage = (e) => { if (e.data == "YEEET!") window.location.reload(); }
-                </script>
-                `
-            }
-    */
-    function svelteHTML(this: Buchta, code: string) {
+        if (!existsSync(basePath + dirname(route))) {
+            mkdirSync(basePath + dirname(route), { recursive: true });
+        }
+
+        // @ts-ignore It is there
+        writeFileSync(basePath + route.replaceAll(".svelte", ".js"), code);
+
+        if (basename(route) == `${defaultFileName}.svelte`) {
+            writeFileSync(basePath + route.replace(".svelte", ".js"), code + "console.log(Component.render().html)");
+            chdir(basePath);
+            const { stdout, stderr } = spawnSync(["bun", route.replace(".svelte", ".js").replace("/", "./")])
+            console.log(stderr?.toString());
+            htmls.set(route.replace(`${defaultFileName}.svelte`, ""), stdout?.toString());
+            chdir("../..");
+        }
+    }
+
+    function svelteHTML(this: Buchta, code: string, ssr: string) {
         const template = this.getTemplate("svelte.html");
         if (template) {
-            let html = template.split("<!-- code -->").join(
-                `
+            let html = template.replace("<!-- html -->", () => ssr).replace("<!-- code -->", () => `
 <script type="module">
 ${code}
 new Component({
     target: document.body,
+    hydrate: true
 });
 </script>
                 `
@@ -61,12 +91,13 @@ new Component({
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body>
-    
+${ssr} 
 </body>
 <script type="module">
 ${code}
 new Component({
     target: document.body,
+    hydrate: true
 });
 </script>
 </html>
@@ -93,7 +124,7 @@ new Component({
                     patched.set(route, new Array());
                 }
                 const obj = patched.get(route);
-                if (obj)
+                if (obj && !obj?.includes(split[i]))
                     obj.push(split[i]);
                 split[i] = `// ${split[i]}`;
             }
@@ -122,7 +153,7 @@ new Component({
             });
         } else {
             this.get(route, (_req: BuchtaRequest, res: BuchtaResponse) => {
-                res.send(svelteHTML.call(this, code));
+                res.send(svelteHTML.call(this, code, htmls.get(route) || ""));
                 res.setHeader("Content-Type", "text/html");
             });
         }
@@ -131,13 +162,24 @@ new Component({
     return function (this: Buchta) {
         this.assignExtHandler("svelte", (route: string, file: string) => {
             const content = readFileSync(file, { encoding: "utf-8" });
-            const { js } = compile(content, {
+            if (opts.ssr) {
+                const { js } = compile(content, {
+                    generate: "ssr"
+                });
+
+                const code = hideSvelteImports(route, js.code);
+
+                preSSR(route, code, this.getDefaultFileName());
+            }
+
+            const csr = compile(content, {
                 generate: "dom",
-                ...opts
+                hydratable: true
             });
 
-            const code = hideSvelteImports(route, js.code);
-            this.bundler.addCustomFile(route, `${route.replace(".svelte", ".js")}`, code);
+            const code2 = hideSvelteImports(route, csr.js.code);
+
+            this.bundler.addCustomFile(route, `${route.replace(".svelte", ".js")}`, code2);
             this.bundler.addPatch(route, patchAfterBundle);
         });
     }

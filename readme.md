@@ -52,3 +52,7 @@ Source code should be easier to read even without comments
 * Live reload is here!
 
 Just update one of files in `public` directory and your page should be reloaded automatically
+
+* Svelte plugins gets SSR
+
+SSR Support is still experimental.

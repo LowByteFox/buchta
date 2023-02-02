@@ -1,17 +1,11 @@
 <script>
-    let count = 0;
-    const inc = () => {
-        count++;
-    }
-
-    const dec = () => {
-        count--;
-    }
+    import Main from "./Main.svelte";
 </script>
 
-<h1>Count is { count }</h1>
-
 <div>
-    <button on:click={inc} class="btn" title="increment">+</button>
-    <button on:click={dec} class="btn idk" title="decrement">-</button>
+    <h1>Svelte + SSR</h1>
+    <Main />
+    <div>
+        <h2>It Works Just Fine!</h2>
+    </div>
 </div>
