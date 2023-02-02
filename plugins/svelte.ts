@@ -49,11 +49,6 @@ export function svelte(buchtaSvelte: any = { ssr: false }) {
 
         if (basename(route) == `${defaultFileName}.svelte`) {
             writeFileSync(basePath + route.replace(".svelte", ".js"), code + "console.log(Component.render().html)");
-            chdir(basePath);
-            const { stdout, stderr } = spawnSync(["bun", route.replace(".svelte", ".js").replace("/", "./")])
-            console.log(stderr?.toString());
-            htmls.set(route.replace(`${defaultFileName}.svelte`, ""), stdout?.toString());
-            chdir("../..");
         }
     }
 
@@ -133,6 +128,8 @@ new Component({
     }
 
     function patchAfterBundle(this: Buchta, route: string, code: string) {
+        const defaultFileName = this.getDefaultFileName();
+
         if (patched.has(route)) {
             const obj = patched.get(route);
             let before = "";
@@ -142,8 +139,16 @@ new Component({
                 }
             code = `${before}\n${code}`;
         }
-        if (route.endsWith(`${this.getDefaultFileName()}.svelte`)) {
+        if (route.endsWith(`${defaultFileName}.svelte`)) {
             route = route.substring(0, route.length - 7 - this.getDefaultFileName().length);
+
+            let basePath = process.cwd() + "/.buchta/"
+            basePath += "pre-ssr";
+            chdir(basePath);
+            const { stdout, stderr } = spawnSync(["bun", `./${route}/index.js`]);
+            console.log(stderr?.toString());
+            htmls.set(route, stdout?.toString());
+            chdir("../..");
         }
 
         if (route.endsWith(".svelte")) {

@@ -107,11 +107,6 @@ ${code}
 
         if (basename(route) == `${defaultFileName}${ext}`) {
             writeFileSync(basePath + route.replace(ext, ".js"), code + "console.log(render(index()))");
-            chdir(basePath);
-            const { stdout, stderr } = spawnSync(["bun", route.replace(ext, ".js").replace("/", "./")])
-            console.log(stderr?.toString());
-            htmls.set(route.replace(`${defaultFileName}${ext}`, ""), stdout?.toString());
-            chdir("../..");
         }
     }
 
@@ -127,6 +122,15 @@ ${code}
         }
         if (route.endsWith(`${this.getDefaultFileName()}.jsx`) || route.endsWith(`${this.getDefaultFileName()}.tsx`)) {
             route = route.substring(0, route.length - 4 - this.getDefaultFileName().length);
+
+            let basePath = process.cwd() + "/.buchta/"
+            basePath += "pre-ssr";
+            
+            chdir(basePath);
+            const { stdout, stderr } = spawnSync(["bun", `./${route}/index.js`]);
+            console.log(stderr?.toString());
+            htmls.set(route, stdout?.toString());
+            chdir("../..");
         }
 
         if (route.endsWith(".jsx") || route.endsWith(".tsx")) {
