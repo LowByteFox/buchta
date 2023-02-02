@@ -2,7 +2,7 @@ import { BuchtaRequest } from "../../src/request";
 import { BuchtaResponse } from "../../src/response";
 
 export default function (req: BuchtaRequest, res: BuchtaResponse) {
-    res.send(`I am ${req.query.get("name")}\n`);
+    res.send(`I am ${req.query?.get("name")}\n`);
 }
 
 // this data will be provided to plugins that expand setting up the routes ( e.g. Buchta.get, Buchta.post, etc. )

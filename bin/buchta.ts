@@ -6,6 +6,7 @@ if (process.argv.length == 0) {
     console.log('Commands:');
     console.log('  init\t\tCreates basic project structure');
     console.log('  serve\t\tStarts a local server');
+    console.log('  build\t\tExport your website');
     process.exit(0);
 }
 
@@ -16,6 +17,7 @@ if (command == "--help" || command == "-h") {
     console.log('Commands:');
     console.log('  init\t\tCreates basic project structure');
     console.log('  serve\t\tStarts a local server');
+    console.log('  build\t\tExport your website');
     process.exit(0);
 }
 
@@ -25,4 +27,8 @@ if (command == "init") {
 
 if (command == "serve") {
     require('./serve');
+}
+
+if (command == "build") {
+    require("./build");
 }

@@ -56,3 +56,8 @@ Just update one of files in `public` directory and your page should be reloaded 
 * Svelte plugins gets SSR
 
 SSR Support is still experimental.
+
+* Buchta CLI now gets `build`
+
+Are you done with your app? Export it and use it in for example in gh pages! <br>
+Be aware that this is experimental feature and not everything may work and be exported!

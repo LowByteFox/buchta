@@ -5,10 +5,13 @@ import { BuchtaBundler } from "./bundler";
 
 import { readdir } from "fs/promises";
 import { basename, dirname, resolve } from "path";
-import { existsSync, readFileSync } from "fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { BuchtaSubrouter } from "./subrouter";
 import { colors, customLog } from "./colors";
 import { fswatch } from "./fswatch";
+import { chdir, exit } from "process";
+
+const mimeLook = require("mime-types");
 
 export class Buchta {
     [x: string]: any;
@@ -22,6 +25,7 @@ export class Buchta {
     private wsOpen: Array<Function> = new Array();
     private wsMessage: Array<Function> = new Array();
     private wsClose: Array<Function> = new Array();
+    private registerToBuild: Array<any> = new Array();
     enableWs = true;
 
     get: route;
@@ -135,6 +139,7 @@ export class Buchta {
             this.get(route, (_req: BuchtaRequest, res: BuchtaResponse) => {
                 res.sendFile(file);
             });
+            this.registerToBuild.push(route);
         })
     }
 
@@ -142,6 +147,7 @@ export class Buchta {
         const routeIndex = this.config?.routes?.fileName || "index";
         const extension = filename.split(".").pop();
         if (filename.startsWith(routeIndex) && filename.endsWith(".html")) {
+            this.registerToBuild.push(dirname(route));
             if (this.livereload) {
                 let content = readFileSync(path, {encoding: "utf-8"});
                 content += `
@@ -174,15 +180,18 @@ export class Buchta {
                 this.get(route, (_req, res) => {
                     res.sendFile(path);
                 });
+                this.registerToBuild.push(route);
             }
         } else {
             if (this.fextHandlers.has(extension)) {
                 this.fextHandlers.get(extension)?.(route, path);
+                this.registerToBuild.push([route, extension]);
             } else {
                 this.WARN(`File 'public${route}' should be in 'static' directory\n`);
                 this.get(route, (_req, res) => {
                     res.sendFile(path);
                 });
+                this.registerToBuild.push(route);
             }
         }
     }
@@ -384,6 +393,134 @@ export class Buchta {
         });
         console.log(`Buchta entered oven and met Bun. Both of them started talking about HTTP on port ${serverPort}`);
         func?.();
+    }
+
+    build() {
+        this.run();
+
+        console.log("\nWaiting 5s for server to fully load\n");
+
+        setTimeout(async () => {
+            console.clear();
+            console.log(
+`                           
+                     :===.                            
+               ======#@@@*==========.                 
+            :--***************%@@%%%+---              
+          ::*##               +####*%@@%..            
+          @@=                   =@%*****@@-           
+       .==@@=    :========.     +@@%##**%%+=:         
+       -@@**:  --*########=-:   -*%@@%##**%@*         
+       -@@     %@+::::::::#@*     =@@%%%##%@*         
+       -@@-----@@#++++++++%@#-----*@@%%%%%@@*         
+      .-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%@@@@#..       
+     .@@@@%@@%%%@%@%%%%@%%%@%%%%%%%%%%@@@@@@@@#       
+     .@%==================================#@@@%#*     
+    **::                              ::--*@@@@@%##   
+  **=-      =**              ****      .::=+#@@@@@@*+ 
+  @@:       +##              ####         ::=%%@@@@## 
+  @@:            *@%=   =@@:               .:-+@@*+   
+ .@@:            -*********.                .:+@%     
+ .@@:                                      :--+@%     
+ .@@:                                     .:-=*@%     
+ .@@=-::.                             ...:-=+%#-:     
+  --##==--::::.          .       .::::--==*#*=:       
+    :=%#=======-------:::---------======%%+-:         
+      :=%%%%*+==============*%%%%%%%%%%%::.           
+       .----#@@@@@@@@@@@@@@@#-----------             
+`
+            )
+            console.log("\nExporting app\n");
+
+            this.WARN("Buchta Build is still experimental feature! Not everything is being exported\n\n");
+
+            let exportBase = process.cwd();
+            exportBase += "/dist/";
+
+            if (!existsSync(exportBase)) {
+                mkdirSync(exportBase);
+            }
+
+            chdir(exportBase);
+
+            for (const path of this.registerToBuild) {
+                if (path instanceof Array) {
+                    const [pth, ext] = path;
+
+                    if (!existsSync(dirname(pth))) {
+                        mkdirSync("." + dirname(pth), {recursive: true});
+                    }
+
+                    if (basename(pth) == `${this.getDefaultFileName()}.${ext}`) {
+
+                        const req = await fetch(`localhost:${this.getPort()}/${dirname(pth)}`);
+                        const text = this.replaceImports(await req.text());
+
+                        writeFileSync("." + pth.replace("." + ext, ".html"), this.matchBundle(pth, text));
+                    } else {
+                        const req = await fetch(`localhost:${this.getPort()}/${pth}`);
+                        const text = this.replaceImports(await req.text());
+                        const ctype = req.headers.get("Content-Type").replace("text/javascript", "application/javascript");
+                        const targetExt = mimeLook.extension(ctype);
+                        if (targetExt) {
+                            writeFileSync("." + pth.replace("." + ext, "." + targetExt), this.matchBundle(pth, text))
+                        }
+                    }
+                } else {
+
+                    if (!existsSync(dirname(path))) {
+                        mkdirSync("." + dirname(path), {recursive: true});
+                    }
+
+                    const req = await fetch(`localhost:${this.getPort()}/${path}`);
+                    const text = this.replaceImports(await req.text());
+
+                    if (path.endsWith("/")) {
+                        writeFileSync("." + path + "index.html", this.matchBundle(path, text));
+                    } else {
+                        writeFileSync("." + path, this.matchBundle(path, text));
+                    }
+                }
+            }
+
+            const bundleReq = await fetch(`localhost:${this.getPort()}/buchta-build-bundle/`);
+            const bundleText = await bundleReq.text();
+            writeFileSync("bundle.js", bundleText);
+            chdir("..");
+
+            console.log("Done!");
+            exit(0);
+        }, 5000);
+    }
+
+    private replaceImports(code: string) {
+        const split = code.split("\n");
+        for (let i = 0; i < split.length; i++) {
+            if (split[i].includes("import")) {
+                const match = split[i].match(/(".+"|'.+')/);
+                if (match && split[i].includes(".")) {
+                    const base = match[0].slice(1, match[0].length - 1);
+                    const splited = base.split(".");
+                    splited.pop();
+                    split[i] = split[i].replace(base, splited.join(".") + ".js");
+                }
+            }
+        }
+        return split.join("\n");
+    }
+
+    private modifyImport(filePath) {
+        const parts = filePath.split('/');
+        let importPath = '../';
+        for (let i = 1; i < parts.length - 2; i++) {
+            importPath += '../';
+        }
+        importPath += 'bundle.js';
+        return importPath;
+    }
+
+    private matchBundle(path: string, code: string) {
+        return code.replaceAll("/buchta-build-bundle/", this.modifyImport(path));
     }
 
     parseQuery(path: string) {
