@@ -1,7 +1,7 @@
-import { route } from "./router";
-import { BuchtaRequest } from "./request";
-import { BuchtaResponse } from "./response";
-import { Buchta } from "./buchta";
+import { route } from "../router";
+import { BuchtaRequest } from "../request";
+import { BuchtaResponse } from "../response";
+import { Buchta } from "../buchta";
 
 export class BuchtaSubrouter {
     private data: any = [];

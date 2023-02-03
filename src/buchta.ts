@@ -5,10 +5,10 @@ import { BuchtaBundler } from "./bundler";
 
 import { readdir } from "fs/promises";
 import { basename, dirname, resolve } from "path";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
-import { BuchtaSubrouter } from "./subrouter";
-import { colors, customLog } from "./colors";
-import { fswatch } from "./fswatch";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
+import { BuchtaSubrouter } from "./utils/subrouter";
+import { colors, customLog } from "./utils/colors";
+import { fswatch } from "./utils/fswatch";
 import { chdir, exit } from "process";
 
 const mimeLook = require("mime-types");
@@ -401,7 +401,6 @@ export class Buchta {
         console.log("\nWaiting 5s for server to fully load\n");
 
         setTimeout(async () => {
-            console.clear();
             console.log(
 `                           
                      :===.                            
@@ -441,6 +440,8 @@ export class Buchta {
                 mkdirSync(exportBase);
             }
 
+            let serverCode = "import { Buchticka } from \"./buchticka\";\nconst server = new Buchticka();\n"
+
             chdir(exportBase);
 
             for (const path of this.registerToBuild) {
@@ -455,15 +456,21 @@ export class Buchta {
 
                         const req = await fetch(`localhost:${this.getPort()}/${dirname(pth)}`);
                         const text = this.replaceImports(await req.text());
-
+                        serverCode += `
+server.get("${dirname(pth)}", (r: any, s: any) => { s.sendFile(import.meta.dir + "/" + "${"." + pth.replace("." + ext, ".html")}"); s.setHeader("Content-Type", "text/html"); })
+`
                         writeFileSync("." + pth.replace("." + ext, ".html"), this.matchBundle(pth, text));
                     } else {
                         const req = await fetch(`localhost:${this.getPort()}/${pth}`);
                         const text = this.replaceImports(await req.text());
                         const ctype = req.headers.get("Content-Type").replace("text/javascript", "application/javascript");
                         const targetExt = mimeLook.extension(ctype);
+                        const routePath = "." + pth.replace("." + ext, "." + targetExt);
                         if (targetExt) {
-                            writeFileSync("." + pth.replace("." + ext, "." + targetExt), this.matchBundle(pth, text))
+                            serverCode += `
+server.get("${routePath.slice(1)}", (r: any, s: any) => { s.sendFile(import.meta.dir + "/" + "${routePath}"); s.setHeader("Content-Type", "${ctype}"); })
+`
+                            writeFileSync(routePath, this.matchBundle(pth, text))
                         }
                     }
                 } else {
@@ -476,8 +483,14 @@ export class Buchta {
                     const text = this.replaceImports(await req.text());
 
                     if (path.endsWith("/")) {
+                        serverCode += `
+server.get("${path}", (r: any, s: any) => { s.sendFile(import.meta.dir + "/" + "${"." + path + "index.html"}"); s.setHeader("Content-Type", "text/html"); })
+`
                         writeFileSync("." + path + "index.html", this.matchBundle(path, text));
                     } else {
+                        serverCode += `
+server.get("${path}", (r: any, s: any) => { s.sendFile(import.meta.dir + "/" + "${"." + path}"); s.setHeader("Content-Type", "${req.headers.get("Content-Type")}"); })
+`
                         writeFileSync("." + path, this.matchBundle(path, text));
                     }
                 }
@@ -486,6 +499,11 @@ export class Buchta {
             const bundleReq = await fetch(`localhost:${this.getPort()}/buchta-build-bundle/`);
             const bundleText = await bundleReq.text();
             writeFileSync("bundle.js", bundleText);
+            copyFileSync(import.meta.dir + "/buchticka.ts", "./buchticka.ts");
+            serverCode += `
+server.get("/bundle.js", (r: any, s: any) => { s.sendFile(import.meta.dir + "/" + "./bundle.js"); s.setHeader("Content-Type", "application/javascript"); })
+`
+            writeFileSync("server.ts", `${serverCode}server.run(${this.getPort()})`);
             chdir("..");
 
             console.log("Done!");

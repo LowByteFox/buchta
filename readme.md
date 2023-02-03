@@ -61,3 +61,7 @@ SSR Support is still experimental.
 
 Are you done with your app? Export it and use it in for example in gh pages! <br>
 Be aware that this is experimental feature and not everything may work and be exported!
+
+* Meet `Buchticka` a stripped down version of `Buchta`, used in exported apps
+
+* `src` directory cleanup

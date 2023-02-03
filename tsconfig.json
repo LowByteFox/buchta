@@ -1,5 +1,5 @@
 {
-    "include": ["src/**/*"],
+    "include": ["src/**/*", "dist/server.ts", "dist/buchticka.ts"],
     "exclude": ["src/**/example.ts"],
     "compilerOptions": {
         "lib": [
