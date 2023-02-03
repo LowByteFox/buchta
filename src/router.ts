@@ -7,6 +7,7 @@ interface BuchtaRoute {
     b: (req: BuchtaRequest, res: BuchtaResponse) => void,
     f: (req: BuchtaRequest, res: BuchtaResponse) => void,
     a: (req: BuchtaRequest, res: BuchtaResponse) => void,
+    path: string,
 }
 
 export class Router {
@@ -31,7 +32,7 @@ export class Router {
                         this.preParams.set(regex, map);
                     }
                 })
-                this.routes.set(regex, {a: null, b: null, f: handler});
+                this.routes.set(regex, {a: null, b: null, f: handler, path: path});
             };
         }
     }

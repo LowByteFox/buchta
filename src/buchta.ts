@@ -370,6 +370,7 @@ export class Buchta {
                 if (!route)
                     return new Response("404");
                 req.params = server.router.params;
+                req.originalRoute = route.path;
 
                 const buchtaRes = new BuchtaResponse();
 
@@ -527,18 +528,18 @@ server.get("/bundle.js", (r: any, s: any) => { s.sendFile(import.meta.dir + "/" 
         return split.join("\n");
     }
 
-    private modifyImport(filePath) {
+    private modifyImport(filePath: string, file: string) {
         const parts = filePath.split('/');
-        let importPath = '../';
-        for (let i = 1; i < parts.length - 2; i++) {
+        let importPath = './';
+        for (let i = 1; i < parts.length - 1; i++) {
             importPath += '../';
         }
-        importPath += 'bundle.js';
+        importPath += file;
         return importPath;
     }
 
     private matchBundle(path: string, code: string) {
-        return code.replaceAll("/buchta-build-bundle/", this.modifyImport(path));
+        return code.replaceAll("/buchta-build-bundle/", this.modifyImport(path, "bundle.js"));
     }
 
     parseQuery(path: string) {

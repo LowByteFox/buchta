@@ -52,7 +52,7 @@ export function svelte(buchtaSvelte: any = { ssr: false }) {
         }
     }
 
-    function svelteHTML(this: Buchta, code: string, ssr: string) {
+    function svelteHTML(this: Buchta, code: string, ssr: string, route: string) {
         const template = this.getTemplate("svelte.html");
         if (template) {
             let html = template.replace("<!-- html -->", () => ssr).replace("<!-- code -->", () => `
@@ -114,7 +114,7 @@ new Component({
     const hideSvelteImports = (route: string, code: string) => {
         const split: string[] = code.split("\n");
         for (let i = 0; i < split.length; i++) {
-            if (split[i].includes("import") && (split[i].includes(".svelte") || split[i].includes(".js") || split[i].includes(".ts"))) {
+            if (split[i].startsWith("import") && (split[i].includes(".svelte") || split[i].includes(".js") || split[i].includes(".ts"))) {
                 if (!patched.has(route)) {
                     patched.set(route, new Array());
                 }
@@ -139,6 +139,7 @@ new Component({
                 }
             code = `${before}\n${code}`;
         }
+
         if (route.endsWith(`${defaultFileName}.svelte`)) {
             route = route.substring(0, route.length - 7 - this.getDefaultFileName().length);
 
@@ -146,8 +147,9 @@ new Component({
             basePath += "pre-ssr";
             chdir(basePath);
             const { stdout, stderr } = spawnSync(["bun", `./${route}/index.js`]);
-            console.log(stderr?.toString());
-            htmls.set(route, stdout?.toString());
+            const out = stderr?.toString();
+            if (out.length > 0) console.log(out);
+            htmls.set(route, stdout?.toString().slice(stdout?.toString().indexOf("<")));
             chdir("../..");
         }
 
@@ -157,11 +159,46 @@ new Component({
                 res.setHeader("Content-Type", "text/javascript");
             });
         } else {
-            this.get(route, (_req: BuchtaRequest, res: BuchtaResponse) => {
-                res.send(svelteHTML.call(this, code, htmls.get(route) || ""));
+            this.get(route, (req: BuchtaRequest, res: BuchtaResponse) => {
+                res.send(svelteHTML.call(this, code, htmls.get(route) || "", req.originalRoute));
                 res.setHeader("Content-Type", "text/html");
             });
         }
+    }
+
+    const assignBuchtaRoute = (code: string, route: string) => {
+        return `
+const buchtaRoute = () => {
+    let params = new Map();
+
+    const path = "${route}";
+    let currentPath = "";
+    if (typeof window != "undefined")
+        currentPath = window.location.href;
+    else
+        return {
+            query: new Map(),
+            params: new Map()
+        }
+
+    const url = new URL(currentPath);
+    const paramDefs = path.match(/:.+?(?=\\/)/g);
+    const paths = path.split("/");
+    const currentPaths = url.pathname.split("/");
+
+    for (const el of paramDefs) {
+            const value = currentPaths[paths.indexOf(el)];
+        params.set(el.slice(1), value);
+    }
+
+    return {
+        query: url.searchParams,
+        params: params,
+    };
+}
+
+${code}
+`
     }
 
     return function (this: Buchta) {
@@ -172,7 +209,7 @@ new Component({
                     generate: "ssr"
                 });
 
-                const code = hideSvelteImports(route, js.code);
+                const code = hideSvelteImports(route, assignBuchtaRoute(js.code, route));
 
                 preSSR(route, code, this.getDefaultFileName());
             }
@@ -182,7 +219,7 @@ new Component({
                 hydratable: true
             });
 
-            const code2 = hideSvelteImports(route, csr.js.code);
+            const code2 = hideSvelteImports(route, assignBuchtaRoute(csr.js.code, route));
 
             this.bundler.addCustomFile(route, `${route.replace(".svelte", ".js")}`, code2);
             this.bundler.addPatch(route, patchAfterBundle);

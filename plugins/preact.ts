@@ -67,7 +67,7 @@ ${code}
     const hideJsxImports = (route: string, code: string) => {
         const split: string[] = code.split("\n");
         for (let i = 0; i < split.length; i++) {
-            if (split[i].includes("import") && (split[i].includes(".jsx") || split[i].includes(".js") || split[i].includes(".ts"))) {
+            if (split[i].startsWith("import") && (split[i].includes(".jsx") || split[i].includes(".js") || split[i].includes(".ts") || split[i].includes(".tsx"))) {
                 if (!patched.has(route)) {
                     patched.set(route, new Array());
                 }
@@ -128,7 +128,8 @@ ${code}
             
             chdir(basePath);
             const { stdout, stderr } = spawnSync(["bun", `./${route}/index.js`]);
-            console.log(stderr?.toString());
+            const out = stderr?.toString();
+            if (out.length > 0) console.log(out);
             htmls.set(route, stdout?.toString());
             chdir("../..");
         }
@@ -140,7 +141,7 @@ ${code}
             });
         } else {
             this.get(route, (_req: BuchtaRequest, res: BuchtaResponse) => {
-                res.send(pageGen.call(this, code, htmls.get(route) || ""));
+                res.send(pageGen.call(this, code, htmls.get(route) || "", ));
                 res.setHeader("Content-Type", "text/html");
             });
         }

@@ -7,3 +7,4 @@ buchta.config.ts
 buchta_old.png
 .buchta/
 templates/
+dist/

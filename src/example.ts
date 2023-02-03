@@ -1,7 +1,7 @@
 import { Buchta } from "./buchta";
 import { BuchtaRequest } from "./request";
 import { BuchtaResponse } from "./response";
-import { BuchtaSubrouter } from "./subrouter";
+import { BuchtaSubrouter } from "./utils/subrouter";
 
 const app = new Buchta();
 

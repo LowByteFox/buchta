@@ -65,3 +65,7 @@ Be aware that this is experimental feature and not everything may work and be ex
 * Meet `Buchticka` a stripped down version of `Buchta`, used in exported apps
 
 * `src` directory cleanup
+
+* Svelte pages now get `buchtaRoute` function
+
+Function returns object containing `params` and `query`

@@ -1,6 +1,6 @@
 {
-    "include": ["src/**/*", "dist/server.ts", "dist/buchticka.ts"],
-    "exclude": ["src/**/example.ts"],
+    "include": ["src/**/*"],
+    "exclude": ["src/**/example.ts", "dist/**/*"],
     "compilerOptions": {
         "lib": [
             "ESNext"
