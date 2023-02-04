@@ -1,6 +1,5 @@
 <script>
     const route = buchtaRoute();
-    console.log(Object.fromEntries(route.query.entries()));
 </script>
 
 <h1>

@@ -18,7 +18,7 @@ cd buchta
 bun install
 bun add marked svelte
 bun run src/example.ts
-# open browser and type localhost:4000/
+# open browser and type localhost:3000/
 ```
 
 ### Changelog
@@ -69,3 +69,5 @@ Be aware that this is experimental feature and not everything may work and be ex
 * Svelte pages now get `buchtaRoute` function
 
 Function returns object containing `params` and `query`
+
+* Minifier using `Uglify.js`

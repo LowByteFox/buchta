@@ -1,6 +1,7 @@
 import { Buchta } from "../src/buchta";
 import { BuchtaRequest } from "../src/request";
 import { BuchtaResponse } from "../src/response";
+import { hideImports } from "../src/utils/utils";
 
 // @ts-ignore It is there
 import { spawnSync } from "bun";
@@ -8,7 +9,16 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { basename, dirname } from "path";
 import { chdir } from "process";
 
+import * as UglifyJS from "uglify-js";
+
 export function preact(buchtaPreact: any = { ssr: false }) {
+
+    const options = {
+        mangle: {
+            toplevel: true,
+        },
+        nameCache: {}
+    };
 
     const opts = buchtaPreact;
 
@@ -63,23 +73,6 @@ ${code}
             return output;
     }
 
-    // hides file imports so that the bundler won't get confused
-    const hideJsxImports = (route: string, code: string) => {
-        const split: string[] = code.split("\n");
-        for (let i = 0; i < split.length; i++) {
-            if (split[i].startsWith("import") && (split[i].includes(".jsx") || split[i].includes(".js") || split[i].includes(".ts") || split[i].includes(".tsx"))) {
-                if (!patched.has(route)) {
-                    patched.set(route, new Array());
-                }
-                const obj = patched.get(route);
-                if (obj)
-                    obj.push(split[i]);
-                split[i] = `// ${split[i]}`;
-            }
-        }
-        return split.join("\n");
-    }
-
     const preSSR = (route: string, code: string, defaultFileName: string, ext: string) => {
         if (patched.has(route)) {
             const obj = patched.get(route);
@@ -130,8 +123,17 @@ ${code}
             const { stdout, stderr } = spawnSync(["bun", `./${route}/index.js`]);
             const out = stderr?.toString();
             if (out.length > 0) console.log(out);
-            htmls.set(route, stdout?.toString());
+            const output = stdout.toString();
+            const beforeHtml = output.substring(0, output.indexOf("<"));
+            // @ts-ignore It is there
+            console.write(beforeHtml);
+            htmls.set(route, output.slice(output.indexOf("<")));
             chdir("../..");
+        }
+
+        if (opts?.minify) {
+            const out = UglifyJS.minify(code, options);
+            code = out.code;
         }
 
         if (route.endsWith(".jsx") || route.endsWith(".tsx")) {
@@ -171,7 +173,13 @@ ${code}
         }
 
         // @ts-ignore It is there
-        code = hideJsxImports(route, code).replaceAll("jsxEl", "_jsxEl").replaceAll("JSXFrag", "_JSXFrag");
+        code = assignBuchtaRoute(hideImports(code, (match) => {
+            const arr = patched.get(route) || new Array<string>();
+            if (!arr.includes(match)) {
+                arr.push(match);
+            }
+            patched.set(route, arr);
+        }).replaceAll("jsxEl", "_jsxEl").replaceAll("JSXFrag", "_JSXFrag"), route);
 
         if (opts.ssr) {
             preSSR(route, code, this.getDefaultFileName(), ext);
@@ -187,6 +195,41 @@ ${code}
 
         this.bundler.addCustomFile(route, `${route.replace(ext, ".js")}`, code);
         this.bundler.addPatch(route, patchAfterBundle);
+    }
+
+    const assignBuchtaRoute = (code: string, route: string) => {
+        return `
+const buchtaRoute = () => {
+    let params = new Map();
+
+    const path = "${route}";
+    let currentPath = "";
+    if (typeof window != "undefined")
+        currentPath = window.location.href;
+    else
+        return {
+            query: new Map(),
+            params: new Map()
+        }
+
+    const url = new URL(currentPath);
+    const paramDefs = path.match(/:.+?(?=\\/)/g);
+    const paths = path.split("/");
+    const currentPaths = url.pathname.split("/");
+
+    for (const el of paramDefs) {
+            const value = currentPaths[paths.indexOf(el)];
+        params.set(el.slice(1), value);
+    }
+
+    return {
+        query: url.searchParams,
+        params: params,
+    };
+}
+
+${code}
+`
     }
 
     return function (this: Buchta) {

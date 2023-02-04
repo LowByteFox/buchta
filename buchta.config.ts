@@ -14,8 +14,9 @@ export default {
         fileName: "index"
     },
 
-    plugins: [swagger("/swag/"), markdown(), svelte({ ssr: true }), preact({
+    plugins: [swagger("/swag/"), markdown(), svelte({ ssr: true, minify: false }), preact({
         ssr: true,
-        tsx: true
+        tsx: true,
+        minify: false
     }), livereload()]
 }
