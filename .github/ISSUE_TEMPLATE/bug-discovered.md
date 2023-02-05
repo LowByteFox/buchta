@@ -21,11 +21,9 @@ assignees: ''
 \# A clear and concise description of what you expected to happen.
 
 **Machine info**
-
 \# Write what `uname -a` writes to the terminal
 
 **Additional context**
-
 \# Add any other context about the problem here.
 
 ### After you are done, remove every line that starts with `\#`, including this one
