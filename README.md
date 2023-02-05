@@ -79,3 +79,5 @@ Function returns object containing `params` and `query`
 * Added few extra utils
 
 * Added error page
+
+* Comminuty update, preparing for larger community and completing community standards
