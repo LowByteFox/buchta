@@ -1,7 +1,7 @@
 import { Buchta } from "../src/buchta";
 import { BuchtaRequest } from "../src/request";
 import { BuchtaResponse } from "../src/response";
-import { hideImports } from "../src/utils/utils";
+import { awaitImportRegex, cjsModuleRegex, hideImports } from "../src/utils/utils";
 
 import { compile } from "svelte/compiler";
 
@@ -32,12 +32,24 @@ export function svelte(buchtaSvelte: any = { ssr: false }) {
     const htmls: Map<string, string | undefined> = new Map();
 
     const preSSR = (route: string, code: string, defaultFileName: string) => {
+        code = `const buchtaSSR = typeof document == "undefined" ? true : false;\n${code}`;
+
         if (patched.has(route)) {
             const obj = patched.get(route);
             let before = "";
             if (obj)
                 for (const e of obj) {
-                    before += `${e}\n`;
+                    if (awaitImportRegex.exec(e)) {
+                        code = code.replace(new RegExp("//.*" + awaitImportRegex.source), ((match) => {
+                            return match.match(awaitImportRegex)?.[0] || "";
+                        }));
+                    } else if (cjsModuleRegex.exec(e)) {
+                        code = code.replace(new RegExp("//.*" + cjsModuleRegex.source), ((match) => {
+                            return match.match(cjsModuleRegex)?.[0] || "";
+                        }));
+                    } else {
+                        before += `${e}\n`;
+                    }
                 }
             code = `${before}\n${code}`;
         }
@@ -125,9 +137,10 @@ ${code}
             code = `${before}\n${code}`;
         }
 
-        if (route.endsWith(`${defaultFileName}.svelte`)) {
+        if (route.endsWith(`${defaultFileName}.svelte`))
             route = route.substring(0, route.length - 7 - this.getDefaultFileName().length);
-
+        
+        if (route.endsWith(`/`) && buchtaSvelte.ssr) {
             let basePath = process.cwd() + "/.buchta/"
             basePath += "pre-ssr";
             chdir(basePath);
@@ -224,6 +237,8 @@ ${code}
                 generate: "dom",
                 hydratable: true
             });
+
+            patched.clear();
 
             const code2 = hideImports(assignBuchtaRoute(csr.js.code, route), (match) => {
                 const arr = patched.get(route) || new Array<string>();

@@ -10,6 +10,7 @@ import { BuchtaSubrouter } from "./utils/subrouter";
 import { colors, customLog } from "./utils/colors";
 import { fswatch } from "./utils/fswatch";
 import { chdir, exit } from "process";
+import { errorPage } from "./utils/pages";
 
 const mimeLook = require("mime-types");
 
@@ -86,9 +87,7 @@ export class Buchta {
                 if (this.livereload) {
                     fswatch(file, null, async () => {
                         await this.handleFile(shortenedFile, route, file, methods);
-                        this.bundler.bundle(true);
-                        this.bundler.build(this, true);
-                        
+                        this.bundleProject(true);
                         this.livereload.clients.forEach(client => {
                             client.send("YEEET!");
                         })
@@ -96,8 +95,7 @@ export class Buchta {
                 }
             });
 
-            this.bundler.bundle();
-            this.bundler.build(this);
+            this.bundleProject();
 
             const templateDir = `${this.config.rootDirectory}/templates`;
             if (existsSync(templateDir)) {
@@ -141,6 +139,21 @@ export class Buchta {
             });
             this.registerToBuild.push(route);
         })
+    }
+
+    private bundleProject(quiet = false) {
+        if (this.bundler.bundle()) {
+            this.bundler.build(this, quiet);
+        } else {
+            for (const route of this.router.routes) {
+                const method = route[0].split("/").shift();
+                this.router[method](route[0].slice(method.length + 1), (_: any, s: BuchtaResponse) => {
+                    s.send(errorPage("Gah, a crash! Fix the issue and restart the server! The bundler failed!"));
+                    s.setHeader("Content-Type", "text/html");
+                });
+            }
+            this.WARN("Gah, a crash! Fix the issue and restart the server! The bundler failed!\n");
+        }
     }
 
     async handleFile(filename: string, route: string, path: string, methods: string[]) {
@@ -381,7 +394,7 @@ export class Buchta {
 
                 res = route.f(req, buchtaRes);
                 if (res?.then) await res;
-
+                
                 res = route.a?.(req, buchtaRes);
                 if (res?.then) await res;
 

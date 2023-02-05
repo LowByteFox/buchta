@@ -67,24 +67,30 @@ export class BuchtaBundler {
     /**
      * Creates bundle
      */
-    bundle(quiet=false) {
-        spawnSync(["bun", "bun", ...this.files, ...this.customImports]);
-        if (!existsSync(`${process.cwd()}/node_modules.bun`)) return;
+    bundle(): boolean {
+        const bunBundle = spawnSync(["bun", "bun", ...this.files, ...this.customImports]);
+
+        if (bunBundle.stderr.length > 0) console.log(bunBundle.stderr.toString());
+
+        if (!existsSync(`${process.cwd()}/node_modules.bun`)) return false;
+        
         const { stdout, stderr } = spawnSync(["bun", `${process.cwd()}/node_modules.bun`]);
-        if (!quiet)
-            console.log(stderr.toString());
+
+        if (stderr.length > 0) console.log(stderr.toString());
+
         this.bundleCode = stdout.toString();
+        return true;
     }
     
     /**
      * This function will bundle everything
      * @param {Buchta} server - server used for everything 
      */
-    build(server: Buchta, quiet=false) {
+    build(server: Buchta, quiet = false) {
         if (!existsSync(`${process.cwd()}/node_modules.bun`)) return;
         const { stderr } = spawnSync(["bun", "build", "--outdir", this.buildRoot, ...this.files, ...this.customImports]);
-        if (!quiet)
-            console.log(stderr.toString());
+
+        if (!quiet && stderr.length > 0) console.log(stderr.toString());
 
         for (const el of this.files) {
             const route = el.replace(this.rootDir, "");

@@ -1,7 +1,7 @@
 import { Buchta } from "../src/buchta";
 import { BuchtaRequest } from "../src/request";
 import { BuchtaResponse } from "../src/response";
-import { hideImports } from "../src/utils/utils";
+import { awaitImportRegex, cjsModuleRegex, hideImports } from "../src/utils/utils";
 
 // @ts-ignore It is there
 import { spawnSync } from "bun";
@@ -61,25 +61,36 @@ ${code}
 </script>
 </html>
 `
-            if (this.livereload) {
-                output += `
+        if (this.livereload) {
+            output += `
                 <script>
                 let socket = new WebSocket("ws://localhost:${this.getPort()}");
 
                 socket.onmessage = (e) => { if (e.data == "YEEET!") window.location.reload(); }
                 </script>
                 `
-            }
-            return output;
+        }
+        return output;
     }
 
     const preSSR = (route: string, code: string, defaultFileName: string, ext: string) => {
+        code = `const buchtaSSR = typeof document == "undefined" ? true : false;\n${code}`;
         if (patched.has(route)) {
             const obj = patched.get(route);
             let before = "";
             if (obj)
                 for (const e of obj) {
-                    before += `${e}\n`;
+                    if (awaitImportRegex.exec(e)) {
+                        code = code.replace(new RegExp("//.*" + awaitImportRegex.source), ((match) => {
+                            return match.match(awaitImportRegex)?.[0] || "";
+                        }));
+                    } else if (cjsModuleRegex.exec(e)) {
+                        code = code.replace(new RegExp("//.*" + cjsModuleRegex.source), ((match) => {
+                            return match.match(cjsModuleRegex)?.[0] || "";
+                        }));
+                    } else {
+                        before += `${e}\n`;
+                    }
                 }
             code = `${before}\n${code}`;
         }
@@ -113,12 +124,13 @@ ${code}
                 }
             code = `${before}\n${code}`;
         }
-        if (route.endsWith(`${this.getDefaultFileName()}.jsx`) || route.endsWith(`${this.getDefaultFileName()}.tsx`)) {
+        if ((route.endsWith(`${this.getDefaultFileName()}.jsx`) || route.endsWith(`${this.getDefaultFileName()}.tsx`)))
             route = route.substring(0, route.length - 4 - this.getDefaultFileName().length);
 
+        if (route.endsWith("/") && opts.srr) {
             let basePath = process.cwd() + "/.buchta/"
             basePath += "pre-ssr";
-            
+
             chdir(basePath);
             const { stdout, stderr } = spawnSync(["bun", `./${route}/index.js`]);
             const out = stderr?.toString();
@@ -143,7 +155,7 @@ ${code}
             });
         } else {
             this.get(route, (_req: BuchtaRequest, res: BuchtaResponse) => {
-                res.send(pageGen.call(this, code, htmls.get(route) || "", ));
+                res.send(pageGen.call(this, code, htmls.get(route) || "",));
                 res.setHeader("Content-Type", "text/html");
             });
         }
@@ -172,6 +184,8 @@ ${code}
             code = `import { h, hydrate, Fragment } from "preact";\n${transpiler.transformSync(content, {})}\n`;
         }
 
+        patched.clear();
+
         // @ts-ignore It is there
         code = assignBuchtaRoute(hideImports(code, (match) => {
             const arr = patched.get(route) || new Array<string>();
@@ -179,6 +193,7 @@ ${code}
                 arr.push(match);
             }
             patched.set(route, arr);
+            // @ts-ignore It is there
         }).replaceAll("jsxEl", "_jsxEl").replaceAll("JSXFrag", "_JSXFrag"), route);
 
         if (opts.ssr) {

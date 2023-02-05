@@ -71,3 +71,11 @@ Be aware that this is experimental feature and not everything may work and be ex
 Function returns object containing `params` and `query`
 
 * Minifier using `Uglify.js`
+
+* Svelte and Preact `await import` and `require` fixed
+
+* Say hello to `svect` => `Svelte` + `Preact`
+
+* Added few extra utils
+
+* Added error page
