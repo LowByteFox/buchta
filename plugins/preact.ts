@@ -1,7 +1,7 @@
 import { Buchta } from "../src/buchta";
 import { BuchtaRequest } from "../src/request";
 import { BuchtaResponse } from "../src/response";
-import { awaitImportRegex, cjsModuleRegex, hideImports } from "../src/utils/utils";
+import { awaitImportRegex, cjsModuleRegex, hideImports, showImportsSSR } from "../src/utils/utils";
 
 // @ts-ignore It is there
 import { spawnSync } from "bun";
@@ -11,14 +11,13 @@ import { chdir } from "process";
 
 import * as UglifyJS from "uglify-js";
 
-export function preact(buchtaPreact: any = { ssr: false }) {
+export interface buchtaPreactConf {
+    ssr?: boolean;
+    tsx?: boolean;
+    minify?: boolean;
+}
 
-    const options = {
-        mangle: {
-            toplevel: true,
-        },
-        nameCache: {}
-    };
+export function preact(buchtaPreact: buchtaPreactConf = { ssr: false }) {
 
     const opts = buchtaPreact;
 
@@ -74,33 +73,17 @@ ${code}
     }
 
     const preSSR = (route: string, code: string, defaultFileName: string, ext: string) => {
-        code = `const buchtaSSR = typeof document == "undefined" ? true : false;\n${code}`;
-        if (patched.has(route)) {
-            const obj = patched.get(route);
-            let before = "";
-            if (obj)
-                for (const e of obj) {
-                    if (awaitImportRegex.exec(e)) {
-                        code = code.replace(new RegExp("//.*" + awaitImportRegex.source), ((match) => {
-                            return match.match(awaitImportRegex)?.[0] || "";
-                        }));
-                    } else if (cjsModuleRegex.exec(e)) {
-                        code = code.replace(new RegExp("//.*" + cjsModuleRegex.source), ((match) => {
-                            return match.match(cjsModuleRegex)?.[0] || "";
-                        }));
-                    } else {
-                        before += `${e}\n`;
-                    }
-                }
-            code = `${before}\n${code}`;
-        }
-        // @ts-ignore It is there
-        code = code.replaceAll(".tsx", ".js").replaceAll(".jsx", ".js");
         let basePath = process.cwd() + "/.buchta/"
         if (!existsSync(basePath + "pre-ssr")) {
             mkdirSync(basePath + "pre-ssr");
         }
         basePath += "pre-ssr";
+
+        code = `const buchtaSSR = typeof document == "undefined" ? true : false;\n${code}`;
+        code = showImportsSSR(code, patched, route, basePath);
+        // @ts-ignore It is there
+        code = code.replaceAll(".tsx", ".js").replaceAll(".jsx", ".js");
+
 
         if (!existsSync(basePath + dirname(route))) {
             mkdirSync(basePath + dirname(route), { recursive: true });
@@ -127,7 +110,7 @@ ${code}
         if ((route.endsWith(`${this.getDefaultFileName()}.jsx`) || route.endsWith(`${this.getDefaultFileName()}.tsx`)))
             route = route.substring(0, route.length - 4 - this.getDefaultFileName().length);
 
-        if (route.endsWith("/") && opts.srr) {
+        if (route.endsWith("/") && opts.ssr) {
             let basePath = process.cwd() + "/.buchta/"
             basePath += "pre-ssr";
 
@@ -144,7 +127,7 @@ ${code}
         }
 
         if (opts?.minify) {
-            const out = UglifyJS.minify(code, options);
+            const out = UglifyJS.minify(code);
             code = out.code;
         }
 
@@ -162,6 +145,9 @@ ${code}
     }
 
     function handle(this: Buchta, route: string, file: string, ext: string) {
+        if (patched.has(route)) {
+            patched.set(route, []);
+        }
         const content = readFileSync(file, { encoding: "utf-8" });
 
         // @ts-ignore It is there
@@ -183,8 +169,6 @@ ${code}
         } else {
             code = `import { h, hydrate, Fragment } from "preact";\n${transpiler.transformSync(content, {})}\n`;
         }
-
-        patched.clear();
 
         // @ts-ignore It is there
         code = assignBuchtaRoute(hideImports(code, (match) => {

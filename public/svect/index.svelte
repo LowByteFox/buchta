@@ -1,15 +1,13 @@
 <script>
     import { h, render } from "preact";
     import { onMount } from "svelte";
+    import { count } from "./store.js";
 
     let countValue = 0;
 
     onMount(async () => {
         const { Comp } = await import("./Preact.jsx");
         render(h(Comp), document.getElementById("preact"));
-
-        // just to get rid of annoying error
-        const { count } = await import("./store.js");
 
         count.subscribe(value => {
     		countValue = value;

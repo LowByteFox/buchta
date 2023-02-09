@@ -1,4 +1,3 @@
-import { swagger } from "./plugins/swagger";
 import { markdown } from "./plugins/markdown";
 import { svelte } from "./plugins/svelte";
 import { preact } from "./plugins/preact";
@@ -14,9 +13,9 @@ export default {
         fileName: "index"
     },
 
-    plugins: [swagger("/swag/"), markdown(), svelte({ ssr: true, minify: false }), preact({
+    plugins: [markdown(), svelte({ ssr: true, minify: true }), preact({
         ssr: true,
         tsx: true,
-        minify: false
+        minify: true
     }), livereload()]
 }

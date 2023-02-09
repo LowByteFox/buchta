@@ -1,7 +1,7 @@
 import { Buchta } from "../src/buchta";
 import { BuchtaRequest } from "../src/request";
 import { BuchtaResponse } from "../src/response";
-import { awaitImportRegex, cjsModuleRegex, hideImports } from "../src/utils/utils";
+import { awaitImportRegex, cjsModuleRegex, hideImports, showImportsSSR } from "../src/utils/utils";
 
 import { compile } from "svelte/compiler";
 
@@ -13,54 +13,35 @@ import { chdir } from "process";
 
 import * as UglifyJS from "uglify-js";
 
+export interface buchtaSvelteConf {
+    ssr?: boolean;
+    minify?: boolean;
+}
+
 /**
  * Svelte support for Buchta
  * @param {any} buchtaSvelte - options for the svelte compiler
  */
-export function svelte(buchtaSvelte: any = { ssr: false }) {
-
-    const options = {
-        mangle: {
-            toplevel: true,
-        },
-        nameCache: {}
-    };
-
+export function svelte(buchtaSvelte: buchtaSvelteConf = { ssr: false }) {
     const opts = buchtaSvelte;
 
     const patched: Map<string, Array<string>> = new Map();
     const htmls: Map<string, string | undefined> = new Map();
 
     const preSSR = (route: string, code: string, defaultFileName: string) => {
-        code = `const buchtaSSR = typeof document == "undefined" ? true : false;\n${code}`;
 
-        if (patched.has(route)) {
-            const obj = patched.get(route);
-            let before = "";
-            if (obj)
-                for (const e of obj) {
-                    if (awaitImportRegex.exec(e)) {
-                        code = code.replace(new RegExp("//.*" + awaitImportRegex.source), ((match) => {
-                            return match.match(awaitImportRegex)?.[0] || "";
-                        }));
-                    } else if (cjsModuleRegex.exec(e)) {
-                        code = code.replace(new RegExp("//.*" + cjsModuleRegex.source), ((match) => {
-                            return match.match(cjsModuleRegex)?.[0] || "";
-                        }));
-                    } else {
-                        before += `${e}\n`;
-                    }
-                }
-            code = `${before}\n${code}`;
-        }
-        // @ts-ignore It is there
-        code = code.replaceAll(".svelte", ".js");
         let basePath = process.cwd() + "/.buchta/"
         if (!existsSync(basePath + "pre-ssr")) {
             mkdirSync(basePath + "pre-ssr");
         }
 
         basePath += "pre-ssr";
+
+        code = `const buchtaSSR = typeof document == "undefined" ? true : false;\n${code}`;
+
+        code = showImportsSSR(code, patched, route, basePath);
+        // @ts-ignore It is there
+        code = code.replaceAll(".svelte", ".js");
 
         if (!existsSync(basePath + dirname(route))) {
             mkdirSync(basePath + dirname(route), { recursive: true });
@@ -162,8 +143,9 @@ new Component({
 });
 `;
         if (opts?.minify) {
-            const out = UglifyJS.minify(code, options);
-            code = out.code;
+            const out = UglifyJS.minify(code);
+            if (out.code)
+                code = out.code;
         }
 
         if (route.endsWith(".svelte")) {
@@ -216,6 +198,9 @@ ${code}
 
     return function (this: Buchta) {
         this.assignExtHandler("svelte", (route: string, file: string) => {
+            if (patched.has(route)) {
+                patched.set(route, []);
+            }
             const content = readFileSync(file, { encoding: "utf-8" });
             if (opts.ssr) {
                 const { js } = compile(content, {
@@ -237,8 +222,6 @@ ${code}
                 generate: "dom",
                 hydratable: true
             });
-
-            patched.clear();
 
             const code2 = hideImports(assignBuchtaRoute(csr.js.code, route), (match) => {
                 const arr = patched.get(route) || new Array<string>();
