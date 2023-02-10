@@ -197,7 +197,7 @@ export class Buchta {
             }
         } else {
             if (this.fextHandlers.has(extension)) {
-                this.fextHandlers.get(extension)?.(route, path);
+                this.fextHandlers.get(extension)?.call(this, route, path);
                 this.registerToBuild.push([route, extension]);
             } else {
                 this.WARN(`File 'public${route}' should be in 'static' directory\n`);
@@ -348,17 +348,17 @@ export class Buchta {
         let ws = {
             open: (ws: WebSocket) => {
                 for (const fun of this.wsOpen) {
-                    fun(ws);
+                    fun.call(this, ws);
                 }
             },
             message: (ws: WebSocket, msg: string) => {
                 for (const fun of this.wsMessage) {
-                    fun(ws, msg);
+                    fun.call(this, ws, msg);
                 }
             },
             close: (ws: WebSocket) => {
                 for (const fun of this.wsClose) {
-                    fun(ws);
+                    fun.call(this, ws);
                 }
             }
         };

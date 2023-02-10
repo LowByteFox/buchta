@@ -1,5 +1,5 @@
 import { copyFileSync, existsSync, mkdirSync } from "node:fs";
-import { dirname, normalize } from "node:path";
+import { dirname, normalize, relative } from "node:path";
 
 export const esModuleRegex = /import.+(\{.*\}|\w+)\s+from\s+((['"])(((\.\/|\/|\.)[^\s])[\w./]+)\2(['"]))/g;
 export const awaitImportRegex = /(const|var|let).+(\{.*\}|\w+).+\w+.+=\s+(await\s+)?import.*?\(((['"])(\.\/|\/|\.).+(['"]))\)/g;
@@ -23,7 +23,7 @@ export const showImportsSSR = (code: string, patched: Map<string, string[]>, rou
         const obj = patched.get(route);
         let before = "";
         if (obj)
-            for (const e of obj) {
+            for (let e of obj) {
                 if (awaitImportRegex.exec(e)) {
                     code = code.replace(new RegExp("//.*" + awaitImportRegex.source), ((match) => {
                         return match.match(awaitImportRegex)?.[0] || "";
@@ -39,8 +39,17 @@ export const showImportsSSR = (code: string, patched: Map<string, string[]>, rou
                             const fixed = file[0].slice(1);
                             if (fixed.startsWith("/")) {
                                 let publicBase = process.cwd() + "/public";
-                                publicBase += dirname(fixed);
-                                console.log(publicBase);
+                                const resolved = relative(dirname(route), fixed);
+                                publicBase += dirname(route);
+                                publicBase += "/" + resolved;
+
+                                const ssrPath = normalize(basePath + "/" + dirname(route) + "/" + resolved);
+                                if (!existsSync(dirname(ssrPath)))
+                                    mkdirSync(dirname(ssrPath), {recursive: true});
+                                
+                                copyFileSync(publicBase, ssrPath);
+                                e = e.replace(fixed, "./" + resolved);
+                                // TODO Copy files that are being imported starting with / so that the SSR won't struggle trying to import
                             } else {
                                 let currentFileBase = dirname(process.cwd() + "/public/" + route);
                                 currentFileBase += "/" + fixed;

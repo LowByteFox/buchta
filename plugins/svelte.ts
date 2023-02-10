@@ -12,7 +12,7 @@ import { basename, dirname } from "path";
 import { chdir } from "process";
 
 import * as UglifyJS from "uglify-js";
-import { BuchtaCLI } from "../bin/buchta";
+import { BuchtaCLI, BuchtaProjectOption, BuchtaQuestionType } from "../bin/buchta";
 
 export interface buchtaSvelteConf {
     ssr?: boolean;
@@ -209,7 +209,7 @@ ${code}
                         generate: "ssr"
                     });
 
-                    const code = hideImports(assignBuchtaRoute(js.code, route), (match) => {
+                    const code = hideImports(assignBuchtaRoute(js.code, route), (match: string) => {
                         const arr = patched.get(route) || new Array<string>();
                         if (!arr.includes(match)) {
                             arr.push(match);
@@ -235,6 +235,44 @@ ${code}
 
                 this.bundler.addCustomFile(route, `${route.replace(".svelte", ".js")}`, code2);
                 this.bundler.addPatch(route, patchAfterBundle);
+            });
+        }
+        if (this instanceof BuchtaCLI) {
+            const opts = new Map<string, BuchtaProjectOption>();
+
+            opts.set("ssr", {pretty: "Do you want SSR?", type: BuchtaQuestionType.YES_OR_NO});
+            opts.set("minify", {pretty: "Minify code?", type: BuchtaQuestionType.YES_OR_NO});
+            opts.set("livereload", {pretty: "Enable livereload?", type: BuchtaQuestionType.YES_OR_NO});
+
+            this.setTemplateOptions("svelte", opts);
+            
+            this.setTemplateCallback("svelte", (opts: Map<string, BuchtaProjectOption>) => {
+                const configTemplate = `
+import { svelte } from "buchta/plugins/svelte.js";
+` + 
+// @ts-ignore It is there
+`${/(y|yes)/i.exec(opts.get("livereload")?.value) ? "import { livereload } from \"buchta/plugins/livereload.js\";" : " "}
+
+export default {
+    port: 3000,
+
+    // @ts-ignore yes there is import.meta.dir
+    rootDirectory: import.meta.dir,
+
+    plugins: [svelte({
+            ssr: ` + 
+            // @ts-ignore It is there
+            `${/(y|yes)/i.exec(opts.get("ssr")?.value) ? "true" : "false"},`+
+            // @ts-ignore It is there
+            ` minify: ${/(y|yes)/i.exec(opts.get("minify")?.value) ? "true" : "false"}
+        }), `+
+    // @ts-ignore It is there
+    `${/(y|yes)/i.exec(opts.get("livereload")?.value) ? "livereload()" : " "}]
+}
+`
+            writeFileSync("buchta.config.ts", configTemplate);
+
+            console.log("Buchta Svelte project was setup successfully!\n");
             });
         }
     }

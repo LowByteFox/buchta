@@ -1,7 +1,7 @@
 <script>
     import { h, render } from "preact";
     import { onMount } from "svelte";
-    import { count } from "./store.js";
+    import { count } from "/svect/store.js";
 
     let countValue = 0;
 

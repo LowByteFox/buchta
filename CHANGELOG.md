@@ -69,3 +69,9 @@ Function returns object containing `params` and `query`
 * Plugins can extend CLI
 
 * fixed tsconfig and bugs
+
+* Added `BuchtaQuestionType` and `BuchtaProjectOption` for CLI plugins
+
+* SSR imports now support `/` paths
+
+* Svelte plugin now works with the new CLI

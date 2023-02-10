@@ -1,5 +1,5 @@
 import { useEffect, useState } from "preact/hooks";
-import { count } from "./store.js";
+import { count } from "/svect/store.js";
 
 export function Comp() {
     const [countValue, setCount] = useState();
