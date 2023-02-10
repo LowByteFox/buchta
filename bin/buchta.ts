@@ -3,6 +3,9 @@
 import { readFileSync } from "fs";
 import { readdir } from "fs/promises";
 import { resolve } from "path";
+import { chdir } from "process";
+import { Buchta } from "../src/buchta";
+import { addFile } from "./add";
 import { initProject } from "./init";
 
 process.argv = process.argv.slice(2);
@@ -20,12 +23,18 @@ export interface BuchtaProjectOption {
     selectData?: string[];
 }
 
+export interface BuchtaPluginTemplate {
+    filename: string;
+    content: string;
+}
+
 export class BuchtaCLI {
     cmd: string;
     args: string[];
     projectTemplates = new Map<string, Map<string, string>>();
     private templateOptions = new Map<string, Map<string, BuchtaProjectOption>>();
     private templateCallbacks = new Map<string, (opts: Map<string, BuchtaProjectOption>) => void>();
+    private pluginTemplates = new Map<string, BuchtaPluginTemplate>();
 
     constructor() {
         this.cmd = process.argv[0];
@@ -58,19 +67,48 @@ export class BuchtaCLI {
             } catch {}
 
             if (config) {
+                chdir(config.rootDirectory);
+                
                 config.plugins.forEach(plug => {
                     plug.call(this);
                 })
             }
 
-            if (this.cmd == "init") {
-                this.init();
+            switch (this.cmd) {
+                case "init":
+                    this.init()
+                    break;
+                case "build":
+                    this.build()
+                    break;
+                case "serve":
+                    this.serve()
+                    break;
+                case "add":
+                    this.add()
+                    break;
+                default:
+                    this.help()
             }
         })();
     }
 
     init() {
         initProject.call(this);
+    }
+
+    build() {
+        const app = new Buchta();
+        app.build();
+    }
+
+    serve() {
+        const app = new Buchta();
+        app.run();
+    }
+
+    add() {
+        addFile.call(this);
     }
 
     help() {
@@ -81,7 +119,7 @@ export class BuchtaCLI {
             "  init\t\t(name)\n\t\tCreate new buchta project",
             "  serve\t\tStart web server",
             "  build\t\tExport your web application",
-            "  add\t\t(template|plugin|get|post|put|delete|middleware name)\n\t\tCreate new file from type template",
+            "  add\t\t(template|plugin|api|middleware name)\n\t\tCreate new file from type template",
             ""
         ];
         msgs.forEach(m => console.log(m));
@@ -111,6 +149,14 @@ export class BuchtaCLI {
 
     setTemplateCallback(name: string, callback: (opts: Map<string, BuchtaProjectOption>) => void) {
         this.templateCallbacks.set(name, callback);
+    }
+
+    getPluginTemplate(name: string) {
+        return this.pluginTemplates.get(name);
+    }
+
+    setPluginTemplate(name: string, options: BuchtaPluginTemplate) {
+        this.pluginTemplates.set(name, options);
     }
 }
 

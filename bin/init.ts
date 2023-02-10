@@ -1,74 +1,7 @@
-// import { existsSync, mkdirSync, writeFileSync } from "fs";
-// import { basename } from "path";
-// import { chdir, exit } from "process";
-// const VFS = require("./templateVFS").default;
-
 import { existsSync, mkdirSync, writeFileSync } from "fs";
 import { dirname } from "path";
 import { chdir } from "process";
 import { BuchtaCLI, BuchtaProjectOption, BuchtaQuestionType } from "./buchta";
-
-// let basePath = process.cwd();
-// const templates = Object.keys(VFS).slice(1);
-// let current: string | null = null;
-
-// console.clear();
-
-// mkdirSync(basePath + "/" + current);
-// chdir(basePath + "/" + current);
-// basePath += "/" + current;
-
-// while (current && !templates.includes(current)) {
-//     console.log("List of current available templates: \n");
-//     console.log(templates.join(" "));
-//     current = prompt("\nPlease type project template: ");
-// }
-
-// if (current == null) exit(1);
-
-// for (const i in VFS["base"]) {
-//     if (i == "dirs") {
-//         VFS["base"][i].forEach(dir => {
-//             if (!existsSync(basePath + dir))
-//                 mkdirSync(basePath + dir)
-//         });
-//     } else {
-//         const output = VFS["base"][i](basename(basePath));
-//         if (!existsSync(basePath + i)) {
-//             writeFileSync(basePath + i, output);
-//         } else {
-//             if (process.argv.includes("--force")) {
-//                 writeFileSync(basePath + i, output);
-//             } else {
-//                 console.log(`File ${basePath + i} exists, skipping; use --force to overwrite`);
-//             }
-//         }
-//     }
-// }
-
-// for (const i in VFS[current]) {
-//     if (i == "dirs") {
-//         VFS[current][i].forEach(dir => {
-//             if (!existsSync(basePath + dir))
-//                 mkdirSync(basePath + dir)
-//         });
-//     } else {
-//         const output = VFS[current][i](basename(basePath));
-//         if (!existsSync(basePath + i)) {
-//             writeFileSync(basePath + i, output);
-//         } else {
-//             if (process.argv.includes("--force")) {
-//                 writeFileSync(basePath + i, output);
-//             } else {
-//                 console.log(`File ${basePath + i} exists, skipping; use --force to overwrite`);
-//             }
-//         }
-//     }
-// }
-
-// console.log(`\nCreate basic project structure from "${current}" template.`);
-// console.log(`\n\nGet started: \ncd ${basename(basePath)} && bun install`);
-// console.log("\nTo start server execute: bun run buchta serve");
 
 export function initProject(this: BuchtaCLI) {
     if (this.args.length == 0) {
@@ -84,6 +17,11 @@ export function initProject(this: BuchtaCLI) {
 
     if (existsSync(name) && !this.args.includes("--force")) {
         console.log("Error: Directory exists");
+        return 0;
+    }
+
+    if (this.args[1] == "--force") {
+        console.log("Error: Please specify \"--force\" at the end!\n");
         return 0;
     }
     

@@ -75,3 +75,9 @@ Function returns object containing `params` and `query`
 * SSR imports now support `/` paths
 
 * Svelte plugin now works with the new CLI
+
+* Svelte plugin now supports the new CLI
+
+* New CLI now supports all add options
+
+* Buchta `0.5 release candidate 1` is here! Bug hunting time!
