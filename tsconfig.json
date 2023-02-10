@@ -1,5 +1,5 @@
 {
-    "include": ["src/**/*"],
+    "include": ["src/**/*", "bin/**/*"],
     "exclude": ["src/**/example.ts", "dist/**/*"],
     "compilerOptions": {
         "lib": [
@@ -12,6 +12,7 @@
         "types": [
             "bun-types"
         ],
-        "outDir": "types"
+        "outDir": "types",
+        "moduleResolution": "node"
     }
 }

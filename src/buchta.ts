@@ -28,6 +28,7 @@ export class Buchta {
     private wsClose: Array<Function> = new Array();
     private registerToBuild: Array<any> = new Array();
     enableWs = true;
+    routeIndex = "index";
 
     get: route;
     post: route;
@@ -157,9 +158,8 @@ export class Buchta {
     }
 
     async handleFile(filename: string, route: string, path: string, methods: string[]) {
-        const routeIndex = this.config?.routes?.fileName || "index";
         const extension = filename.split(".").pop();
-        if (filename.startsWith(routeIndex) && filename.endsWith(".html")) {
+        if (filename.startsWith(this.routeIndex) && filename.endsWith(".html")) {
             this.registerToBuild.push(dirname(route));
             if (this.livereload) {
                 let content = readFileSync(path, {encoding: "utf-8"});
@@ -275,7 +275,7 @@ export class Buchta {
      * Returns fileName used for / routing: /index.html -> / ( index )
      */
     getDefaultFileName() {
-        return this.config.routes.fileName;
+        return this.routeIndex;
     }
 
     private async getFiles(dir: string) {

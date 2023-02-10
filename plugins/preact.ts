@@ -10,6 +10,7 @@ import { basename, dirname } from "path";
 import { chdir } from "process";
 
 import * as UglifyJS from "uglify-js";
+import { BuchtaCLI } from "../bin/buchta";
 
 export interface buchtaPreactConf {
     ssr?: boolean;
@@ -231,24 +232,26 @@ ${code}
 `
     }
 
-    return function (this: Buchta) {
+    return function (this: Buchta | BuchtaCLI) {
 
-        if (opts.ssr) {
-            try {
-                require("preact-render-to-string");
-            } catch {
-                throw new Error("To use SSR with Preact, please install 'preact-render-to-string'");
+        if (this instanceof Buchta) {
+            if (opts.ssr) {
+                try {
+                    require("preact-render-to-string");
+                } catch {
+                    throw new Error("To use SSR with Preact, please install 'preact-render-to-string'");
+                }
             }
-        }
 
-        this.assignExtHandler("jsx", (route: string, file: string) => {
-            handle.call(this, route, file, ".jsx");
-        });
-
-        if (opts.tsx) {
-            this.assignExtHandler("tsx", (route: string, file: string) => {
-                handle.call(this, route, file, ".tsx");
+            this.assignExtHandler("jsx", (route: string, file: string) => {
+                handle.call(this, route, file, ".jsx");
             });
+
+            if (opts.tsx) {
+                this.assignExtHandler("tsx", (route: string, file: string) => {
+                    handle.call(this, route, file, ".tsx");
+                });
+            }
         }
     }
 }

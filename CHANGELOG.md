@@ -64,4 +64,8 @@ Function returns object containing `params` and `query`
 
 * `swagger` plugin left the room
 
-* plugins that need config now have interfaces
+* Plugins that need config now have interfaces
+
+* Plugins can extend CLI
+
+* fixed tsconfig and bugs

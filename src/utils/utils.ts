@@ -35,7 +35,7 @@ export const showImportsSSR = (code: string, patched: Map<string, string[]>, rou
                 } else {
                     const file = e.match(/['"].+?(?=['"])/);
                     if (file) {
-                        if (file[0]?.match(/(.js|.ts|.jsx|.tsx)/g)) {
+                        if (file[0]?.match(/(.js|.ts)/g)) {
                             const fixed = file[0].slice(1);
                             if (fixed.startsWith("/")) {
                                 let publicBase = process.cwd() + "/public";

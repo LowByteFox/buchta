@@ -1,0 +1,11 @@
+{
+    "name": "${name}",
+    "type": "module",
+    "devDependencies": {
+        "bun-types": "latest",
+        "buchta": "latest"
+    },
+    "dependencies": {
+        "svelte": "latest"
+    }
+}

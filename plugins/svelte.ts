@@ -12,6 +12,7 @@ import { basename, dirname } from "path";
 import { chdir } from "process";
 
 import * as UglifyJS from "uglify-js";
+import { BuchtaCLI } from "../bin/buchta";
 
 export interface buchtaSvelteConf {
     ssr?: boolean;
@@ -196,18 +197,35 @@ ${code}
 `
     }
 
-    return function (this: Buchta) {
-        this.assignExtHandler("svelte", (route: string, file: string) => {
-            if (patched.has(route)) {
-                patched.set(route, []);
-            }
-            const content = readFileSync(file, { encoding: "utf-8" });
-            if (opts.ssr) {
-                const { js } = compile(content, {
-                    generate: "ssr"
+    return function (this: Buchta | BuchtaCLI) {
+        if (this instanceof Buchta) {
+            this.assignExtHandler("svelte", function(route: string, file: string) {
+                if (patched.has(route)) {
+                    patched.set(route, []);
+                }
+                const content = readFileSync(file, { encoding: "utf-8" });
+                if (opts.ssr) {
+                    const { js } = compile(content, {
+                        generate: "ssr"
+                    });
+
+                    const code = hideImports(assignBuchtaRoute(js.code, route), (match) => {
+                        const arr = patched.get(route) || new Array<string>();
+                        if (!arr.includes(match)) {
+                            arr.push(match);
+                        }
+                        patched.set(route, arr);
+                    });
+
+                    preSSR(route, code, this.getDefaultFileName());
+                }
+
+                const csr = compile(content, {
+                    generate: "dom",
+                    hydratable: true
                 });
 
-                const code = hideImports(assignBuchtaRoute(js.code, route), (match) => {
+                const code2 = hideImports(assignBuchtaRoute(csr.js.code, route), (match) => {
                     const arr = patched.get(route) || new Array<string>();
                     if (!arr.includes(match)) {
                         arr.push(match);
@@ -215,24 +233,9 @@ ${code}
                     patched.set(route, arr);
                 });
 
-                preSSR(route, code, this.getDefaultFileName());
-            }
-
-            const csr = compile(content, {
-                generate: "dom",
-                hydratable: true
+                this.bundler.addCustomFile(route, `${route.replace(".svelte", ".js")}`, code2);
+                this.bundler.addPatch(route, patchAfterBundle);
             });
-
-            const code2 = hideImports(assignBuchtaRoute(csr.js.code, route), (match) => {
-                const arr = patched.get(route) || new Array<string>();
-                if (!arr.includes(match)) {
-                    arr.push(match);
-                }
-                patched.set(route, arr);
-            });
-
-            this.bundler.addCustomFile(route, `${route.replace(".svelte", ".js")}`, code2);
-            this.bundler.addPatch(route, patchAfterBundle);
-        });
+        }
     }
 }
