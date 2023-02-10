@@ -155,6 +155,7 @@ class BuchtickaRouter {
     }
 }
 
+// TODO: Add middleware support
 export class Buchticka {
     private router: BuchtickaRouter;
     private wsOpen: Array<Function> = new Array();

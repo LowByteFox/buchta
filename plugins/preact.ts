@@ -18,6 +18,7 @@ export interface buchtaPreactConf {
     minify?: boolean;
 }
 
+// TODO: Make plugin new CLI compatible
 export function preact(buchtaPreact: buchtaPreactConf = { ssr: false }) {
 
     const opts = buchtaPreact;

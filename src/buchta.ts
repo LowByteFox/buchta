@@ -409,6 +409,9 @@ export class Buchta {
         func?.();
     }
 
+    // TODO: Fix import paths
+    // TODO: Export api stuff too with middleware
+    // TOOD: Rename Buchta to Buchticka
     build() {
         this.run();
 
