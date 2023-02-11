@@ -144,8 +144,8 @@ new Component({
 });
 `;
         if (opts?.minify) {
-            const out = UglifyJS.minify(code);
-            if (out.code)
+            const out = UglifyJS.minify(code, {compress: false});
+            if (typeof out.code != "undefined" && typeof out.error != "undefined")
                 code = out.code;
         }
 

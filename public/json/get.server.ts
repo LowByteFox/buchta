@@ -1,5 +1,7 @@
+import { parse } from "marked";
+
 export default function(req: any, res: any) {
-    res.send("xd");
+    res.send(parse("# Hello, World!"));
 }
 
 export function before(req: any, res: any) {

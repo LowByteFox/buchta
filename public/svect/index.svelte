@@ -6,7 +6,7 @@
     let countValue = 0;
 
     onMount(async () => {
-        const { Comp } = await import("./Preact.jsx");
+        const { Comp } = await import("/svect/Preact.jsx");
         render(h(Comp), document.getElementById("preact"));
 
         count.subscribe(value => {

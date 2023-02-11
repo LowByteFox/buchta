@@ -129,8 +129,9 @@ ${code}
         }
 
         if (opts?.minify) {
-            const out = UglifyJS.minify(code);
-            code = out.code;
+            const out = UglifyJS.minify(code, {compress: false});
+            if (typeof out.code != "undefined" && typeof out.error != "undefined")
+                code = out.code;
         }
 
         if (route.endsWith(".jsx") || route.endsWith(".tsx")) {

@@ -155,9 +155,8 @@ class BuchtickaRouter {
     }
 }
 
-// TODO: Add middleware support
 export class Buchticka {
-    private router: BuchtickaRouter;
+    private router: BuchtickaRouter = new BuchtickaRouter();
     private wsOpen: Array<Function> = new Array();
     private wsMessage: Array<Function> = new Array();
     private wsClose: Array<Function> = new Array();
@@ -169,8 +168,14 @@ export class Buchticka {
     put: route;
     delete: route;
 
+    addBefore(route: string, method: string, callback: (req: BuchtickaRequest, res: BuchtickaResponse) => void, force: boolean) {
+        this.router.addBefore(route, method, callback, force)
+    }
+    addAfter(route: string, method: string, callback: (req: BuchtickaRequest, res: BuchtickaResponse) => void, force: boolean) {
+        this.router.addAfter(route, method, callback, force)
+    }
+
     constructor() {
-        this.router = new BuchtickaRouter();
         const methods = ["get", "post", "put", "delete"];
         for (const method of methods) {
             this[method] = (path: string, handler: (req: BuchtickaRequest, res: BuchtickaResponse) => void, data: any) => {
@@ -226,7 +231,7 @@ export class Buchticka {
                 }
                 
                 if (!route)
-                    return new Response("404");
+                    return new Response("404", {status: 404});
                 req.params = server.router.params;
 
                 const buchtaRes = new BuchtickaResponse();

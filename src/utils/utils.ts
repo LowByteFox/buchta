@@ -2,8 +2,9 @@ import { copyFileSync, existsSync, mkdirSync } from "node:fs";
 import { dirname, normalize, relative } from "node:path";
 
 export const esModuleRegex = /import.+(\{.*\}|\w+)\s+from\s+((['"])(((\.\/|\/|\.)[^\s])[\w./]+)\2(['"]))/g;
-export const awaitImportRegex = /(const|var|let).+(\{.*\}|\w+).+\w+.+=\s+(await\s+)?import.*?\(((['"])(\.\/|\/|\.).+(['"]))\)/g;
-export const cjsModuleRegex = /(const|var|let).+(\{.*\}|\w+).+\w+.+=\s+require.*?\(((['"])(\.\/|\/|\.).+(['"]))\)/g;
+export const esNormalModule = /import.+(\{.*\}|\w+)\s+from\s+((['"]).+(['"]))/g;
+export const awaitImportRegex = /.+(await\s+)?import.*?\(((['"])(\.\/|\/|\.).+(['"]))\).+/g;
+export const cjsModuleRegex = /.+require.*?\(((['"])(\.\/|\/|\.).+(['"]))\).+/g;
 
 export const hideImports = (code: string, onFind) => {
     return code.replace(esModuleRegex, (match) => {

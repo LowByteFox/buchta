@@ -1,3 +1,3 @@
-export default function(r: any, s: any) {
+export default (r: any, s: any) => {
     s.send("I am delete :D\n");
 }

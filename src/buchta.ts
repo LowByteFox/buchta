@@ -4,19 +4,20 @@ import { BuchtaResponse } from "./response";
 import { BuchtaBundler } from "./bundler";
 
 import { readdir } from "fs/promises";
-import { basename, dirname, resolve } from "path";
+import { basename, dirname, relative, resolve } from "path";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { BuchtaSubrouter } from "./utils/subrouter";
 import { colors, customLog } from "./utils/colors";
 import { fswatch } from "./utils/fswatch";
 import { chdir, exit } from "process";
 import { errorPage } from "./utils/pages";
+import { awaitImportRegex, cjsModuleRegex, esModuleRegex, esNormalModule } from "./utils/utils";
 
 const mimeLook = require("mime-types");
 
 export class Buchta {
     [x: string]: any;
-    private router: Router;
+    private router: Router = new Router();
     private templater = new Map<string, string>();
     private config: any;
     bundler: BuchtaBundler;
@@ -27,6 +28,9 @@ export class Buchta {
     private wsMessage: Array<Function> = new Array();
     private wsClose: Array<Function> = new Array();
     private registerToBuild: Array<any> = new Array();
+    private apisToBuild: Array<string> = new Array();
+    private middleToBuild: Array<string> = new Array();
+    private soonImports: Array<Array<string>> = new Array();
     enableWs = true;
     routeIndex = "index";
 
@@ -36,7 +40,6 @@ export class Buchta {
     delete: route;
 
     constructor(config?: any) {
-        this.router = new Router();
         const methods = ["get", "post", "put", "delete"];
         for (const method of methods) {
             this[method] = (path: string, handler: (req: BuchtaRequest, res: BuchtaResponse) => void, data: any) => {
@@ -118,12 +121,26 @@ export class Buchta {
 
         files.forEach(async file => {
             const route = dirname(file.slice(path.length));
+            
+            const imports = readFileSync(file, {encoding: "utf-8"}).match(esNormalModule);
 
             const module = await import(file);
 
+            let code = "";
+
             methods.forEach(method => {
-                if (module.before) this.router.addBefore(route, method, module.before, false);
-                if (module.after) this.router.addAfter(route, method, module.after, false);
+                if (module.before) {
+                    code += `\nserver.addBefore("${route}", "${method}", ${module.before.toString().replace(/function .+?(?=\()/, "function")}, false)\n`;
+                    this.router.addBefore(route, method, module.before, false);
+                }
+                if (module.after) {
+                    code += `\nserver.addAfter("${route}", "${method}", ${module.after.toString().replace(/function .+?(?=\()/, "function")}, false)\n`;
+                    this.router.addAfter(route, method, module.after, false);
+                }
+                this.middleToBuild.push(code);
+                if (imports)
+                    this.soonImports.push(imports);
+                code = "";
             })
         })
     }
@@ -235,13 +252,22 @@ export class Buchta {
                 });
             }
 
+            let code = `server.${method}("${dirname(route)}", ${func.toString().replace(/function .+?(?=\()/, "function")})`;
+            const imports = readFileSync(path, {encoding: "utf-8"}).match(esNormalModule);
+
             if (module.before) {
+                code += `\nserver.addBefore("${dirname(route)}", "${method}", ${module.before.toString().replace(/function .+?(?=\()/, "function")}, true)`;
                 this.router.addBefore(dirname(route), method, module.before, true);
             }
 
             if (module.after) {
+                code += `\nserver.addAfter("${dirname(route)}", "${method}", ${module.after.toString().replace(/function .+?(?=\()/, "function")}, true)`;
                 this.router.addAfter(dirname(route), method, module.after, true);
             }
+
+            this.apisToBuild.push(code);
+            if (imports)
+                this.soonImports.push(imports);
         }
     }
 
@@ -381,7 +407,7 @@ export class Buchta {
                 }
                 
                 if (!route)
-                    return new Response("404");
+                    return new Response("404", {status: 404});
                 req.params = server.router.params;
                 req.originalRoute = route.path;
 
@@ -409,9 +435,8 @@ export class Buchta {
         func?.();
     }
 
-    // TODO: Fix import paths
     // TODO: Export api stuff too with middleware
-    // TOOD: Rename Buchta to Buchticka
+    // TODO: Rename Buchta to Buchticka
     build() {
         this.run();
 
@@ -457,7 +482,17 @@ export class Buchta {
                 mkdirSync(exportBase);
             }
 
-            let serverCode = "import { Buchticka } from \"./buchticka\";\nconst server = new Buchticka();\n"
+            let serverCode = "import { Buchticka, BuchtickaResponse, BuchtickaRequest } from \"./buchticka\";\n"
+
+            for (const imports of this.soonImports) {
+                for (const imprt of imports) {
+                    if (!/buchta/i.exec(imprt)) {
+                        serverCode += "\n" + imprt + "\n";
+                    }
+                }
+            }
+
+            serverCode += "const server = new Buchticka();\n";
 
             chdir(exportBase);
 
@@ -474,8 +509,7 @@ export class Buchta {
                         const req = await fetch(`localhost:${this.getPort()}/${dirname(pth)}`);
                         const text = this.replaceImports(await req.text());
                         serverCode += `
-server.get("${dirname(pth)}", (r: any, s: any) => { s.sendFile(import.meta.dir + "/" + "${"." + pth.replace("." + ext, ".html")}"); s.setHeader("Content-Type", "text/html"); })
-`
+server.get("${dirname(pth)}", (r: any, s: any) => { s.sendFile(import.meta.dir + "/" + "${"." + pth.replace("." + ext, ".html")}"); s.setHeader("Content-Type", "text/html"); })`
                         writeFileSync("." + pth.replace("." + ext, ".html"), this.matchBundle(pth, text));
                     } else {
                         const req = await fetch(`localhost:${this.getPort()}/${pth}`);
@@ -485,8 +519,7 @@ server.get("${dirname(pth)}", (r: any, s: any) => { s.sendFile(import.meta.dir +
                         const routePath = "." + pth.replace("." + ext, "." + targetExt);
                         if (targetExt) {
                             serverCode += `
-server.get("${routePath.slice(1)}", (r: any, s: any) => { s.sendFile(import.meta.dir + "/" + "${routePath}"); s.setHeader("Content-Type", "${ctype}"); })
-`
+server.get("${routePath.slice(1)}", (r: any, s: any) => { s.sendFile(import.meta.dir + "/" + "${routePath}"); s.setHeader("Content-Type", "${ctype}"); })`
                             writeFileSync(routePath, this.matchBundle(pth, text))
                         }
                     }
@@ -501,13 +534,11 @@ server.get("${routePath.slice(1)}", (r: any, s: any) => { s.sendFile(import.meta
 
                     if (path.endsWith("/")) {
                         serverCode += `
-server.get("${path}", (r: any, s: any) => { s.sendFile(import.meta.dir + "/" + "${"." + path + "index.html"}"); s.setHeader("Content-Type", "text/html"); })
-`
+server.get("${path}", (r: any, s: any) => { s.sendFile(import.meta.dir + "/" + "${"." + path + "index.html"}"); s.setHeader("Content-Type", "text/html"); })`
                         writeFileSync("." + path + "index.html", this.matchBundle(path, text));
                     } else {
                         serverCode += `
-server.get("${path}", (r: any, s: any) => { s.sendFile(import.meta.dir + "/" + "${"." + path}"); s.setHeader("Content-Type", "${req.headers.get("Content-Type")}"); })
-`
+server.get("${path}", (r: any, s: any) => { s.sendFile(import.meta.dir + "/" + "${"." + path}"); s.setHeader("Content-Type", "${req.headers.get("Content-Type")}"); })`
                         writeFileSync("." + path, this.matchBundle(path, text));
                     }
                 }
@@ -518,9 +549,18 @@ server.get("${path}", (r: any, s: any) => { s.sendFile(import.meta.dir + "/" + "
             writeFileSync("bundle.js", bundleText);
             copyFileSync(import.meta.dir + "/buchticka.ts", "./buchticka.ts");
             serverCode += `
-server.get("/bundle.js", (r: any, s: any) => { s.sendFile(import.meta.dir + "/" + "./bundle.js"); s.setHeader("Content-Type", "application/javascript"); })
-`
-            writeFileSync("server.ts", `${serverCode}server.run(${this.getPort()})`);
+server.get("/bundle.js", (r: any, s: any) => { s.sendFile(import.meta.dir + "/" + "./bundle.js"); s.setHeader("Content-Type", "application/javascript"); })\n`
+
+            for (const api of this.apisToBuild) {
+                serverCode += "\n" + api + "\n";
+            }
+            
+            for (const middle of this.middleToBuild) {
+                serverCode += "\n" + middle + "\n";
+            }
+            
+            writeFileSync("server.ts", `${serverCode}server.run(${this.getPort()})\n`);
+            
             chdir("..");
 
             console.log("Done!");
@@ -537,25 +577,47 @@ server.get("/bundle.js", (r: any, s: any) => { s.sendFile(import.meta.dir + "/" 
                     const base = match[0].slice(1, match[0].length - 1);
                     const splited = base.split(".");
                     splited.pop();
-                    split[i] = split[i].replace(base, splited.join(".") + ".js");
+                    split[i] = split[i].replace(base, () => splited.join(".") + ".js");
                 }
             }
         }
         return split.join("\n");
     }
 
-    private modifyImport(filePath: string, file: string) {
-        const parts = filePath.split('/');
-        let importPath = './';
-        for (let i = 1; i < parts.length - 1; i++) {
-            importPath += '../';
-        }
-        importPath += file;
-        return importPath;
-    }
-
     private matchBundle(path: string, code: string) {
-        return code.replaceAll("/buchta-build-bundle/", this.modifyImport(path, "bundle.js"));
+        code.match(awaitImportRegex)?.forEach(match => {
+            const file = match.match(/['"].+?(?=['"])/);
+            if (file) {
+                const fixed = file[0].slice(1);
+                if (fixed.startsWith("/")) {
+                    code = code.replace(fixed, () => "./" + relative(dirname(path), fixed));
+                }
+            }
+        })
+
+        code.match(cjsModuleRegex)?.forEach(match => {
+            const file = match.match(/['"].+?(?=['"])/);
+            if (file) {
+                const fixed = file[0].slice(1);
+                if (fixed.startsWith("/")) {
+                    code = code.replace(fixed, () => "./" + relative(dirname(path), fixed));
+                }
+            }
+        })
+
+        code.match(esModuleRegex)?.forEach(match => {
+            if (match.includes("/buchta-build-bundle/")) return;
+
+            const file = match.match(/['"].+?(?=['"])/);
+            if (file) {
+                const fixed = file[0].slice(1);
+                if (fixed.startsWith("/")) {
+                    code = code.replace(fixed, () => "./" + relative(dirname(path), fixed));
+                }
+            }
+        });
+
+        return code.replaceAll("/buchta-build-bundle/", () => "./" + relative(dirname(path), "/bundle.js"));
     }
 
     parseQuery(path: string) {
@@ -572,5 +634,5 @@ server.get("/bundle.js", (r: any, s: any) => { s.sendFile(import.meta.dir + "/" 
 }
 
 export function get_version() {
-    return "0.4.3";
+    return "0.5-rc1";
 }
