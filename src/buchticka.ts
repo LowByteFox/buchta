@@ -29,7 +29,7 @@ export class BuchtickaResponse {
     }
 
     sendJson(json: any) {
-        this.setHeader("Content-Type", "application/json");
+        this.setHeader("Content-Type", "application/json; charset=utf-8");
         this.body = JSON.stringify(json);
     }
 
@@ -157,11 +157,11 @@ class BuchtickaRouter {
 
 export class Buchticka {
     private router: BuchtickaRouter = new BuchtickaRouter();
-    private wsOpen: Array<Function> = new Array();
-    private wsMessage: Array<Function> = new Array();
-    private wsClose: Array<Function> = new Array();
+    private wsOpen: Array<Function> = [];
+    private wsMessage: Array<Function> = [];
+    private wsClose: Array<Function> = [];
 
-    private afterRouting: Array<Function> = new Array();
+    private afterRouting: Array<Function> = [];
 
     get: route;
     post: route;

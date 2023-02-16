@@ -157,12 +157,12 @@ new Component({
         } else {
             this.get(route, (req: BuchtaRequest, res: BuchtaResponse) => {
                 res.send(svelteHTML.call(this, code, htmls.get(route) || ""));
-                res.setHeader("Content-Type", "text/html");
+                res.setHeader("Content-Type", "text/html; charset=utf-8");
             });
         }
     }
 
-    const assignBuchtaRoute = (code: string, route: string) => {
+    const assignBuchtaRoute = (code: string, route: string, composables: string) => {
         return `
 const buchtaRoute = () => {
     let params = new Map();
@@ -191,8 +191,9 @@ const buchtaRoute = () => {
         query: url.searchParams,
         params: params,
     };
-}
-
+};` +
+// @ts-ignore It is there
+`${composables.replaceAll("\\\"", "\"")}
 ${code}
 `
     }
@@ -204,13 +205,14 @@ ${code}
                     patched.set(route, []);
                 }
                 const content = readFileSync(file, { encoding: "utf-8" });
+                const composables = this.generateComposables();
                 if (opts.ssr) {
                     const { js } = compile(content, {
                         generate: "ssr"
                     });
 
-                    const code = hideImports(assignBuchtaRoute(js.code, route), (match: string) => {
-                        const arr = patched.get(route) || new Array<string>();
+                    const code = hideImports(assignBuchtaRoute(js.code, route, composables || ""), (match: string) => {
+                        const arr = patched.get(route) || [];
                         if (!arr.includes(match)) {
                             arr.push(match);
                         }
@@ -225,8 +227,8 @@ ${code}
                     hydratable: true
                 });
 
-                const code2 = hideImports(assignBuchtaRoute(csr.js.code, route), (match) => {
-                    const arr = patched.get(route) || new Array<string>();
+                const code2 = hideImports(assignBuchtaRoute(csr.js.code, route, composables || ""), (match) => {
+                    const arr = patched.get(route) || [];
                     if (!arr.includes(match)) {
                         arr.push(match);
                     }

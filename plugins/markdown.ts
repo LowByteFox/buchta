@@ -30,7 +30,7 @@ export function markdown() {
 
                 this.get(route, (_req: BuchtaRequest, res: BuchtaResponse) => {
                     res.send(html);
-                    res.setHeader("Content-Type", "text/html");
+                    res.setHeader("Content-Type", "text/html; charset=utf-8");
                 });
             });
         }

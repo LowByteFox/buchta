@@ -25,7 +25,7 @@ export class BuchtaResponse {
     }
 
     sendJson(json: any) {
-        this.setHeader("Content-Type", "application/json");
+        this.setHeader("Content-Type", "application/json; charset=utf-8");
         this.body = JSON.stringify(json);
     }
 

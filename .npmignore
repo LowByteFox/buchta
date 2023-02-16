@@ -1,11 +1,14 @@
 bun.lockb
 public/
+templates/
+static/
+middleware/
+composables/
 src/example.ts
-.cache/
 test/
 buchta.config.ts
 buchta_old.png
 .buchta/
-templates/
 dist/
 .github/
+.dccache

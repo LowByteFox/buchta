@@ -1,5 +1,5 @@
 {
-    "include": ["src/**/*", "bin/**/*"],
+    "include": ["src/**/*", "bin/**/*", "composables/**/*"],
     "exclude": ["src/**/example.ts", "dist/**/*"],
     "compilerOptions": {
         "lib": [

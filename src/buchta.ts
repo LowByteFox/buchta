@@ -12,6 +12,7 @@ import { fswatch } from "./utils/fswatch";
 import { chdir, exit } from "process";
 import { errorPage } from "./utils/pages";
 import { awaitImportRegex, cjsModuleRegex, esModuleRegex, esNormalModule } from "./utils/utils";
+import { match } from "assert";
 
 const mimeLook = require("mime-types");
 
@@ -22,15 +23,16 @@ export class Buchta {
     private config: any;
     bundler: BuchtaBundler;
     port: number;
-    private afterRouting: Array<Function> = new Array();
+    private afterRouting: Array<Function> = [];
     private fextHandlers: Map<string, Function> = new Map();
-    private wsOpen: Array<Function> = new Array();
-    private wsMessage: Array<Function> = new Array();
-    private wsClose: Array<Function> = new Array();
-    private registerToBuild: Array<any> = new Array();
-    private apisToBuild: Array<string> = new Array();
-    private middleToBuild: Array<string> = new Array();
-    private soonImports: Array<Array<string>> = new Array();
+    private wsOpen: Array<Function> = [];
+    private wsMessage: Array<Function> = [];
+    private wsClose: Array<Function> = [];
+    private registerToBuild: Array<any> = [];
+    private apisToBuild: Array<string> = [];
+    private middleToBuild: Array<string> = [];
+    private soonImports: Array<Array<string>> = [];
+    private composables: Map<string, any> = new Map();
     enableWs = true;
     routeIndex = "index";
 
@@ -80,11 +82,14 @@ export class Buchta {
     async autoLoad(methods) {
         if (this.config) {
             if (!this.config.rootDirectory) return;
+            await this.handleComposables(this.config.rootDirectory + "/composables");
+
             const rootDir = this.config.rootDirectory + "/public";
+            if (!existsSync(rootDir)) this.ERROR("Missing directory: \"public\"\n")
             const rootDirFiles = await this.getFiles(rootDir);
             this.bundler = new BuchtaBundler(rootDir);
             this.bundler.prepare();
-            rootDirFiles.forEach(async file => {
+            rootDirFiles.forEach(async (file: string) => {
                 const route = file.substring(rootDir.length).replace("[", ":").replace("]", "");
                 const shortenedFile  = basename(route);
                 await this.handleFile(shortenedFile, route, file, methods);
@@ -113,6 +118,63 @@ export class Buchta {
             await this.handleMiddlewares(this.config.rootDirectory + "/middleware", methods);
             await this.handleStaticFiles(this.config.rootDirectory + "/static");
         }
+    }
+
+    async handleComposables(path: string) {
+        if (!existsSync(path)) return;
+        const files = await this.getFiles(path);
+        for (const file of files) {
+            if (!/(.js|.ts)$/.exec(file)) {
+                this.ERROR(`Skipping file: ${file}, because it is not .js or .ts file!`);
+            } else {
+                const module = await import(file);
+                const name = basename(file).split(".").shift();
+                const val = module?.default();
+                if (val?.res) await val.res;
+
+                this.composables.set(name, val);
+            }
+        }
+    }
+
+    public generateComposables = () => {
+        let code = '';
+        for (const [key, el] of this.composables) {
+            let chunk = `let ${key} = ${JSON.stringify(el, function(key, val) {
+                if (typeof val === 'function') {
+                  return val.toString().replaceAll("\n", "");
+                }
+                return val;
+              }, "\t")};`
+            if (typeof el == "object") {
+                chunk = chunk.slice(0, -3) + ",\n};";
+                for (const regex of [
+                    /["']\s*\(.*\).+=>.+?(?=["'],)./g,
+                    /["']\s*async\s*\(.*\).+=>.+?(?=["'],)./g,
+                    /["']\s*function\s*\(.*\)\s*{.+?(?=["'],)./g,
+                    /["']\s*async\s*function\s*\(.*\)\s*{.+?(?=["'],)./g
+                ]) {
+                    chunk = chunk.replace(regex, (match: string) => {
+                        return match.slice(1, -1);
+                    })
+                }
+            } else if (typeof el == "function") {
+                for (const regex of [
+                    /["']\s*\(.*\).+=>.+?(?=["'];)./g,
+                    /["']\s*async\s*\(.*\).+=>.+?(?=["'];)./g,
+                    /["']\s*function\s*\(.*\)\s*{.+?(?=["'];)./g,
+                    /["']\s*async\s*function\s*\(.*\)\s*{.+?(?=["'];)./g
+                ]) {
+                    chunk = chunk.replace(regex, (match: string) => {
+                        return match.slice(1, -1);
+                    })
+                }
+            }
+
+            code += chunk + "\n";
+        }
+
+        return code;
     }
 
     async handleMiddlewares(path: string, methods: string[]) {
@@ -167,7 +229,7 @@ export class Buchta {
                 const method = route[0].split("/").shift();
                 this.router[method](route[0].slice(method.length + 1), (_: any, s: BuchtaResponse) => {
                     s.send(errorPage("Gah, a crash! Fix the issue and restart the server! The bundler failed!"));
-                    s.setHeader("Content-Type", "text/html");
+                    s.setHeader("Content-Type", "text/html; charset=utf-8");
                 });
             }
             this.WARN("Gah, a crash! Fix the issue and restart the server! The bundler failed!\n");
@@ -190,7 +252,7 @@ export class Buchta {
 
                 this.get(dirname(route), (_req, res) => {
                     res.send(content);
-                    res.setHeader("content-type", "text/html");
+                    res.setHeader("content-type", "text/html; charset=utf-8");
                 });
             } else {
                 this.get(dirname(route), (_req, res) => {
@@ -229,6 +291,13 @@ export class Buchta {
     private WARN(str: string) {
         customLog([colors.bold, colors.white], "[ ");
         customLog([colors.bold, colors.yellow], "WARN");
+        customLog([colors.bold, colors.white], " ]: ");
+        customLog([colors.bold, colors.white], str);
+    }
+
+    private ERROR(str: string) {
+        customLog([colors.bold, colors.white], "[ ");
+        customLog([colors.bold, colors.red], "ERROR");
         customLog([colors.bold, colors.white], " ]: ");
         customLog([colors.bold, colors.white], str);
     }
@@ -435,8 +504,6 @@ export class Buchta {
         func?.();
     }
 
-    // TODO: Export api stuff too with middleware
-    // TODO: Rename Buchta to Buchticka
     build() {
         this.run();
 

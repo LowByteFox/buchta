@@ -143,6 +143,24 @@ export function after(req: BuchtaRequest, res: BuchtaResponse) {
 `);
             console.log(`Info: Middleware "${this.args[1]}middleware.ts" was created!\n`);
             break;
+        case "composable":
+            if (!existsSync("composables"))
+                mkdirSync("composables");
+            
+            if (existsSync("composables/" + this.args[1] + ".ts") && !this.args.includes("--force")) {
+                console.log(`Error: Composable "${this.args[1]}" already exists! Remove it or pass "--force" argument\n`);
+                return 0;
+            }
+
+            const composablePath = process.cwd() + "/composables/";
+
+            writeFileSync(`${composablePath}${this.args[1]}.ts`, `
+export default function() {
+    return "\${name}"
+}
+`.replace("${name}", this.args[1]));
+            console.log(`Info: Composable "${this.args[1]}.ts" was created!\n`);
+            break;
         default:
             console.log(`Error: Unknown option "${this.args[1]}"!\n`);
             this.help()

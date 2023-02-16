@@ -7,9 +7,9 @@ import { BuchtaRequest } from "./request";
 import { BuchtaResponse } from "./response";
 
 export class BuchtaBundler {
-    private customImports: string[] = new Array();
+    private customImports: string[] = [];
     private customRoutes: Map<string, string> = new Map();
-    private files: string[] = new Array();
+    private files: string[] = [];
     private patches: Map<string, Function> = new Map();
     private rootDir: string;
     private bundleCode: string;

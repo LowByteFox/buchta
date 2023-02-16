@@ -142,7 +142,7 @@ ${code}
         } else {
             this.get(route, (_req: BuchtaRequest, res: BuchtaResponse) => {
                 res.send(pageGen.call(this, code, htmls.get(route) || "",));
-                res.setHeader("Content-Type", "text/html");
+                res.setHeader("Content-Type", "text/html; charset=utf-8");
             });
         }
     }
@@ -175,7 +175,7 @@ ${code}
 
         // @ts-ignore It is there
         code = assignBuchtaRoute(hideImports(code, (match) => {
-            const arr = patched.get(route) || new Array<string>();
+            const arr = patched.get(route) || [];
             if (!arr.includes(match)) {
                 arr.push(match);
             }

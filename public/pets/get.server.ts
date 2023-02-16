@@ -3,6 +3,7 @@ import { BuchtaResponse } from "../../src/response";
 
 export default function (req: BuchtaRequest, res: BuchtaResponse) {
     res.send(`I am ${req.query?.get("name")}\n`);
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
 }
 
 // this data will be provided to plugins that expand setting up the routes ( e.g. Buchta.get, Buchta.post, etc. )

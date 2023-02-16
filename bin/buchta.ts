@@ -119,7 +119,7 @@ export class BuchtaCLI {
             "  init\t\t(name)\n\t\tCreate new buchta project",
             "  serve\t\tStart web server",
             "  build\t\tExport your web application",
-            "  add\t\t(template|plugin|api|middleware name)\n\t\tCreate new file from type template",
+            "  add\t\t(template|plugin|api|middleware|composable name)\n\t\tCreate new file from type template",
             ""
         ];
         msgs.forEach(m => console.log(m));

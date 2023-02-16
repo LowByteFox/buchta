@@ -3,3 +3,4 @@ bun.lockb
 .vscode
 .buchta/
 dist/
+.dccache
