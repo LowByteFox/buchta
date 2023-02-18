@@ -704,5 +704,5 @@ server.get("/bundle.js", (r: any, s: any) => { s.sendFile(import.meta.dir + "/" 
 }
 
 export function get_version() {
-    return "0.5-rc1";
+    return "0.5-rc2";
 }
