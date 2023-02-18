@@ -95,6 +95,9 @@ export class Buchta {
                 await this.handleFile(shortenedFile, route, file, methods);
                 if (this.livereload) {
                     fswatch(file, null, async () => {
+                        for (const f of this.livereload.onUpdate) {
+                            f(file);
+                        }
                         await this.handleFile(shortenedFile, route, file, methods);
                         this.bundleProject(true);
                         this.livereload.clients.forEach(client => {

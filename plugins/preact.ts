@@ -216,6 +216,7 @@ const buchtaRoute = () => {
 
     const url = new URL(currentPath);
     const paramDefs = path.match(/:.+?(?=\\/)/g);
+    if (!paramDefs) return { query: url.searchParams, params: null };
     const paths = path.split("/");
     const currentPaths = url.pathname.split("/");
 

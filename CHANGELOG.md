@@ -93,3 +93,7 @@ Function returns object containing `params` and `query`
 You can remove few useless `fetch` calls
 
 * Fixed bugs
+
+* buchtaRoute fixed when params were null
+
+* livereload can trigger a function when file changed
