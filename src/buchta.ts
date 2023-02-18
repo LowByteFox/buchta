@@ -596,9 +596,9 @@ server.get("${dirname(pth)}", (r: any, s: any) => { s.sendFile(import.meta.dir +
                             serverCode += `
 server.get("${routePath.slice(1)}", (r: any, s: any) => { s.sendFile(import.meta.dir + "/" + "${routePath}"); s.setHeader("Content-Type", "${ctype}"); })`
                             if (/\ufffd/.exec(text)) {
-                                writeFileSync("." + path, text);
+                                writeFileSync(routePath, text);
                             } else {
-                                writeFileSync("." + path, this.matchBundle(pth, text));
+                                writeFileSync(routePath, this.matchBundle(pth, text));
                             }
                         }
                     }
