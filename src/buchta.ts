@@ -577,10 +577,15 @@ export class Buchta {
                     if (basename(pth) == `${this.getDefaultFileName()}.${ext}`) {
 
                         const req = await fetch(`localhost:${this.getPort()}/${dirname(pth)}`);
-                        const text = this.replaceImports(await req.text());
+                        let text: string | Blob = await req.blob();
+
+                        if (!/\ufffd/.exec(await text.text())) {
+                            text = this.replaceImports(await text.text());
+                        }
+
                         serverCode += `
 server.get("${dirname(pth)}", (r: any, s: any) => { s.sendFile(import.meta.dir + "/" + "${"." + pth.replace("." + ext, ".html")}"); s.setHeader("Content-Type", "text/html"); })`
-                        writeFileSync("." + pth.replace("." + ext, ".html"), this.matchBundle(pth, text));
+                        if (typeof text == "string") writeFileSync("." + pth.replace("." + ext, ".html"), this.matchBundle(pth, text));
                     } else {
                         const req = await fetch(`localhost:${this.getPort()}/${pth}`);
                         const text = this.replaceImports(await req.text());
@@ -590,7 +595,11 @@ server.get("${dirname(pth)}", (r: any, s: any) => { s.sendFile(import.meta.dir +
                         if (targetExt) {
                             serverCode += `
 server.get("${routePath.slice(1)}", (r: any, s: any) => { s.sendFile(import.meta.dir + "/" + "${routePath}"); s.setHeader("Content-Type", "${ctype}"); })`
-                            writeFileSync(routePath, this.matchBundle(pth, text))
+                            if (/\ufffd/.exec(text)) {
+                                writeFileSync("." + path, text);
+                            } else {
+                                writeFileSync("." + path, this.matchBundle(pth, text));
+                            }
                         }
                     }
                 } else {
@@ -599,17 +608,26 @@ server.get("${routePath.slice(1)}", (r: any, s: any) => { s.sendFile(import.meta
                         mkdirSync("." + dirname(path), {recursive: true});
                     }
 
+                    
                     const req = await fetch(`localhost:${this.getPort()}/${path}`);
-                    const text = this.replaceImports(await req.text());
+                    let text: string | Blob = await req.blob();
+
+                    if (!/\ufffd/.exec(await text.text())) {
+                        text = this.replaceImports(await text.text());
+                    }
 
                     if (path.endsWith("/")) {
                         serverCode += `
 server.get("${path}", (r: any, s: any) => { s.sendFile(import.meta.dir + "/" + "${"." + path + "index.html"}"); s.setHeader("Content-Type", "text/html"); })`
-                        writeFileSync("." + path + "index.html", this.matchBundle(path, text));
+                        if (typeof text == "string") writeFileSync("." + path + "index.html", this.matchBundle(path, text));
                     } else {
                         serverCode += `
 server.get("${path}", (r: any, s: any) => { s.sendFile(import.meta.dir + "/" + "${"." + path}"); s.setHeader("Content-Type", "${req.headers.get("Content-Type")}"); })`
-                        writeFileSync("." + path, this.matchBundle(path, text));
+                        if (typeof text != "string") {
+                            writeFileSync("." + path, await text.arrayBuffer());
+                        } else {
+                            writeFileSync("." + path, this.matchBundle(path, text));
+                        }
                     }
                 }
             }

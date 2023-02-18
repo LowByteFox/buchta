@@ -97,3 +97,5 @@ You can remove few useless `fetch` calls
 * buchtaRoute fixed when params were null
 
 * livereload can trigger a function when file changed
+
+* Build now can export binary data!
