@@ -149,7 +149,9 @@ export class Buchta {
                 }
                 return val;
               }, "\t")};`
-            if (typeof el == "object") {
+            if (el.constructor == [].constructor) {
+
+            } else if (el.constructor == {}.constructor) {
                 chunk = chunk.slice(0, -3) + ",\n};";
                 for (const regex of [
                     /["']\s*\(.*\).+=>.+?(?=["'],)./g,
