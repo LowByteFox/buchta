@@ -107,3 +107,5 @@ You can remove few useless `fetch` calls
 * CLI now has bootstrap and finish option for better project creation
 
 * Svelte plugin fixed bug when components were being over mounted and over hydrated
+
+* CLI fixed missing config recursion

@@ -7,8 +7,6 @@ import { chdir } from "process";
 import { Buchta } from "../src/buchta";
 import { addFile } from "./add";
 import { initProject } from "./init";
-import { svelte } from "../plugins/svelte";
-import { preact } from "../plugins/preact";
 import { bootstrapProject } from "./bootstrap";
 import { finishBootstrap } from "./finish";
 
@@ -79,6 +77,8 @@ export class BuchtaCLI {
                     })
                 }
             } else {
+                const { svelte } = await import("../plugins/svelte");
+                const { preact } = await import("../plugins/preact");
                 svelte().call(this);
                 preact().call(this);
             }
