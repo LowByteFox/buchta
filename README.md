@@ -1,7 +1,7 @@
 # Buchta
 ## Full Stack Framework Powered By Bun
 
-<img src="./buchta_construction2.png" alt="Buchta Logo" width="512"/>
+<img src="./buchta_construction3.png" alt="Buchta Logo" width="512"/>
 
 ## Get Started
 
