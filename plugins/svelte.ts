@@ -135,14 +135,15 @@ ${code}
             console.write(beforeHtml);
             htmls.set(route, output.slice(output.indexOf("<")));
             chdir("../..");
+            
+            code += `
+            new Component({
+                target: document.body,
+                hydrate: true
+            });
+            `;
         }
 
-        code += `
-new Component({
-    target: document.body,
-    hydrate: true
-});
-`;
         if (opts?.minify) {
             const out = UglifyJS.minify(code, {compress: false});
             if (typeof out.code != "undefined" && typeof out.error != "undefined")

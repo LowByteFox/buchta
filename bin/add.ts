@@ -45,10 +45,10 @@ export function addFile(this: BuchtaCLI) {
             }
 
             writeFileSync("plugins/" + this.args[1] + ".ts", `
-import { Buchta } from "buchta";
+import { Buchta, BuchtaCLI } from "buchta";
 
 export function ${this.args[1]}() {
-    return function (this: Buchta) {
+    return function (this: Buchta | BuchtaCLI) {
 
     }
 }

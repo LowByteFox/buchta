@@ -2,7 +2,11 @@ import { BuchtaRequest } from "../../src/request";
 import { BuchtaResponse } from "../../src/response";
 
 export default function (req: BuchtaRequest, res: BuchtaResponse) {
-    res.send(`I am ${req.query?.get("name")}\n`);
+    if (req.query?.get("name").match(/<.+>/g))
+        res.send(`No XSS\n`);
+    else
+        res.send(`I am ${req.query?.get("name")}\n`);
+        
     res.setHeader("Content-Type", "text/html; charset=utf-8");
 }
 

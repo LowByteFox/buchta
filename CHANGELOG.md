@@ -99,3 +99,11 @@ You can remove few useless `fetch` calls
 * livereload can trigger a function when file changed
 
 * Build now can export binary data!
+
+* Preact NOW has new CLI support
+
+* XSS ( Cross Site Scripting ) was fixed for examples in /pets/* 
+
+* CLI now has bootstrap and finish option for better project creation
+
+* Svelte plugin fixed bug when components were being over mounted and over hydrated

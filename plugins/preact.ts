@@ -10,7 +10,7 @@ import { basename, dirname } from "path";
 import { chdir } from "process";
 
 import * as UglifyJS from "uglify-js";
-import { BuchtaCLI } from "../bin/buchta";
+import { BuchtaCLI, BuchtaProjectOption, BuchtaQuestionType } from "../bin/buchta";
 
 export interface buchtaPreactConf {
     ssr?: boolean;
@@ -255,6 +255,68 @@ ${code}
                     handle.call(this, route, file, ".tsx");
                 });
             }
+        }
+        if (this instanceof BuchtaCLI) {
+            const opts = new Map<string, BuchtaProjectOption>();
+
+            opts.set("tsx", {pretty: "Do you want TSX?", type: BuchtaQuestionType.YES_OR_NO});
+            opts.set("ssr", {pretty: "Do you want SSR?", type: BuchtaQuestionType.YES_OR_NO});
+            opts.set("minify", {pretty: "Minify code?", type: BuchtaQuestionType.YES_OR_NO});
+            opts.set("livereload", {pretty: "Enable livereload?", type: BuchtaQuestionType.YES_OR_NO});
+
+            this.setTemplateOptions("preact", opts);
+
+            this.setPluginTemplate("preact", {
+                filename: "preact.html",
+                content: `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+<!-- html -->
+</body>
+<script type="module">
+<!-- code -->
+</script>
+</html>
+`
+            });
+            
+            this.setTemplateCallback("preact", (opts: Map<string, BuchtaProjectOption>) => {
+                const configTemplate = `
+import { preact } from "buchta/plugins/preact.js";
+` + 
+// @ts-ignore It is there
+`${/(y|yes)/i.exec(opts.get("livereload")?.value) ? "import { livereload } from \"buchta/plugins/livereload.js\";" : " "}
+
+export default {
+    port: 3000,
+
+    // @ts-ignore yes there is import.meta.dir
+    rootDirectory: import.meta.dir,
+
+    plugins: [preact({
+            tsx: ` + 
+            // @ts-ignore It is there
+            `${/(y|yes)/i.exec(opts.get("tsx")?.value) ? "true" : "false"},`+
+            ` ssr: ` + 
+            // @ts-ignore It is there
+            `${/(y|yes)/i.exec(opts.get("ssr")?.value) ? "true" : "false"},`+
+            // @ts-ignore It is there
+            ` minify: ${/(y|yes)/i.exec(opts.get("minify")?.value) ? "true" : "false"}
+        }), `+
+    // @ts-ignore It is there
+    `${/(y|yes)/i.exec(opts.get("livereload")?.value) ? "livereload()" : " "}]
+}
+`
+            writeFileSync("buchta.config.ts", configTemplate);
+
+            console.log("Buchta Preact project was setup successfully!\n");
+            });
         }
     }
 }

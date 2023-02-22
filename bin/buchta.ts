@@ -7,6 +7,10 @@ import { chdir } from "process";
 import { Buchta } from "../src/buchta";
 import { addFile } from "./add";
 import { initProject } from "./init";
+import { svelte } from "../plugins/svelte";
+import { preact } from "../plugins/preact";
+import { bootstrapProject } from "./bootstrap";
+import { finishBootstrap } from "./finish";
 
 process.argv = process.argv.slice(2);
 
@@ -69,23 +73,34 @@ export class BuchtaCLI {
             if (config) {
                 chdir(config.rootDirectory);
                 
-                config.plugins.forEach(plug => {
-                    plug.call(this);
-                })
+                if (config.plugins) {
+                    config.plugins.forEach((plug: () => void) => {
+                        plug.call(this);
+                    })
+                }
+            } else {
+                svelte().call(this);
+                preact().call(this);
             }
 
             switch (this.cmd) {
                 case "init":
-                    this.init()
+                    this.init();
                     break;
                 case "build":
-                    this.build()
+                    this.build();
                     break;
                 case "serve":
-                    this.serve()
+                    this.serve();
                     break;
                 case "add":
-                    this.add()
+                    this.add();
+                    break;
+                case "bootstrap":
+                    this.bootstrap();
+                    break;
+                case "finish":
+                    this.finish();
                     break;
                 default:
                     this.help()
@@ -107,6 +122,14 @@ export class BuchtaCLI {
         app.run();
     }
 
+    bootstrap() {
+        bootstrapProject.call(this);
+    }
+
+    finish() {
+        finishBootstrap.call(this);
+    }
+
     add() {
         addFile.call(this);
     }
@@ -117,6 +140,8 @@ export class BuchtaCLI {
         const msgs = [
             "  help\t\tDisplay this message",
             "  init\t\t(name)\n\t\tCreate new buchta project",
+            "  bootstrap\t(name)\n\t\tBootstrap basic buchta project, install dependencies, edit config and finish it",
+            "  finish\tFinish project creation after bootstrap\n",
             "  serve\t\tStart web server",
             "  build\t\tExport your web application",
             "  add\t\t(template|plugin|api|middleware|composable name)\n\t\tCreate new file from type template",
@@ -157,6 +182,14 @@ export class BuchtaCLI {
 
     setPluginTemplate(name: string, options: BuchtaPluginTemplate) {
         this.pluginTemplates.set(name, options);
+    }
+
+    setProjectTemplate(name: string, path: string, content: string) {
+        const map = this.projectTemplates.get(name) || new Map<string, string>();
+
+        map.set(path, content);
+
+        this.projectTemplates.set(name, map);
     }
 }
 
