@@ -165,7 +165,7 @@ ${code}
 
     const assignBuchtaRoute = (code: string, route: string, composables: string) => {
         return `
-const buchtaRoute = () => {
+globalThis.buchtaRoute = () => {
     let params = new Map();
 
     const path = "${route}";

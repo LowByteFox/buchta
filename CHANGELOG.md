@@ -109,3 +109,5 @@ You can remove few useless `fetch` calls
 * Svelte plugin fixed bug when components were being over mounted and over hydrated
 
 * CLI fixed missing config recursion
+
+* `buchtaRoute` now works much better, no need for route sharing

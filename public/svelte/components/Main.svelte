@@ -7,6 +7,8 @@
     const dec = () => {
         count--;
     }
+
+    console.log(buchtaRoute());
 </script>
 
 <h1>Count is { count }</h1>
