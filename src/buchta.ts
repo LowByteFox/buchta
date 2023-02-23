@@ -35,13 +35,14 @@ export class Buchta {
     private composables: Map<string, any> = new Map();
     enableWs = true;
     routeIndex = "index";
+    buildMode = false;
 
     get: route;
     post: route;
     put: route;
     delete: route;
 
-    constructor(config?: any) {
+    constructor(config?: any, buildMode = false) {
         const methods = ["get", "post", "put", "delete"];
         for (const method of methods) {
             this[method] = (path: string, handler: (req: BuchtaRequest, res: BuchtaResponse) => void, data: any) => {
@@ -57,6 +58,8 @@ export class Buchta {
                 }
             };
         }
+
+        this.buildMode = buildMode;
 
         try {
             this.config = config ?? require(process.cwd() + "/buchta.config.ts").default;
@@ -481,7 +484,7 @@ export class Buchta {
                 }
                 
                 if (!route)
-                    return new Response("404", {status: 404});
+                    return new Response(server.getTemplate("404.html") ?? "404", {status: 404, headers: {"Content-Type": "text/html; charset=utf-8;"}});
                 req.params = server.router.params;
                 req.originalRoute = route.path;
 
@@ -492,11 +495,17 @@ export class Buchta {
                 res = route.b?.(req, buchtaRes);
                 if (res?.then) await res;
 
+                if (buchtaRes.canRedirect()) return buchtaRes.buildRedirect()
+
                 res = route.f(req, buchtaRes);
                 if (res?.then) await res;
+
+                if (buchtaRes.canRedirect()) return buchtaRes.buildRedirect()
                 
                 res = route.a?.(req, buchtaRes);
                 if (res?.then) await res;
+
+                if (buchtaRes.canRedirect()) return buchtaRes.buildRedirect()
 
                 return buchtaRes.buildResponse();
             },

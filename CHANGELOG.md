@@ -111,3 +111,9 @@ You can remove few useless `fetch` calls
 * CLI fixed missing config recursion
 
 * `buchtaRoute` now works much better, no need for route sharing
+
+* If used `redirectTo` on response, other stuff won't get executed
+
+So if you used it in before middleware, everything ends
+
+* `404.html` lets you create custom 404 page

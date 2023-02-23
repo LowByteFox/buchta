@@ -4,6 +4,7 @@ import { Buchta } from "../src/buchta";
 export function livereload() {
     return function(this: Buchta | BuchtaCLI) {
         if (this instanceof Buchta) {
+            if (this.buildMode) return;
             this.livereload = {
                 clients: [],
                 onUpdate: [],

@@ -113,7 +113,7 @@ export class BuchtaCLI {
     }
 
     build() {
-        const app = new Buchta();
+        const app = new Buchta(null, true);
         app.build();
     }
 

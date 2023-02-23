@@ -7,6 +7,7 @@ export class BuchtaResponse {
     private statusText: string;
     private body: string | Uint8Array;
     private filePath: string;
+    private redirectTarget: string;
 
     constructor() {
         this.statusCode = 200;
@@ -38,12 +39,24 @@ export class BuchtaResponse {
         this.filePath = filePath;
     }
 
+    redirectTo(path: string) {
+        this.redirectTarget = path;
+    }
+
+    canRedirect() {
+        return this.redirectTarget ? true : false;
+    }
+
     setStatus(statusCode: number) {
         this.statusCode = statusCode;
     }
 
     setStatusText(statusText: string) {
         this.statusText = statusText;
+    }
+
+    buildRedirect() {
+        return Response.redirect(this.redirectTarget);
     }
 
     buildResponse() {
