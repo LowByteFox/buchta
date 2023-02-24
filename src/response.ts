@@ -19,15 +19,18 @@ export class BuchtaResponse {
 
     setHeader(name: string, value: string) {
         this.headers.set(name, value);
+        return this;
     }
 
     send(body: string) {
         this.body = body;
+        return this;
     }
 
     sendJson(json: any) {
         this.setHeader("Content-Type", "application/json; charset=utf-8");
         this.body = JSON.stringify(json);
+        return this;
     }
 
     sendFile(filePath: string) {
@@ -37,10 +40,12 @@ export class BuchtaResponse {
                 this.setHeader("Content-Type", mime);
         }
         this.filePath = filePath;
+        return this;
     }
 
     redirectTo(path: string) {
         this.redirectTarget = path;
+        return this;
     }
 
     canRedirect() {
@@ -49,10 +54,12 @@ export class BuchtaResponse {
 
     setStatus(statusCode: number) {
         this.statusCode = statusCode;
+        return this;
     }
 
     setStatusText(statusText: string) {
         this.statusText = statusText;
+        return this;
     }
 
     buildRedirect() {
@@ -61,7 +68,7 @@ export class BuchtaResponse {
 
     buildResponse() {
         if (this.filePath)
-            return new Response(Bun.file(this.filePath), {
+            return new Response(readFileSync(this.filePath), {
                 status: this.statusCode,
                 statusText: this.statusText,
                 headers: this.headers,
