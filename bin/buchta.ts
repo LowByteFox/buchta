@@ -69,8 +69,7 @@ export class BuchtaCLI {
             } catch {}
 
             if (config) {
-                chdir(config.rootDirectory);
-                
+                              
                 if (config.plugins) {
                     config.plugins.forEach((plug: () => void) => {
                         plug.call(this);

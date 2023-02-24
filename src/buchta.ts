@@ -37,6 +37,13 @@ export class Buchta {
     routeIndex = "index";
     buildMode = false;
 
+    addBefore(route: string, method: string, callback: (req: BuchtaRequest, res: BuchtaResponse) => void, force: boolean) {
+        this.router.addBefore(route, method, callback, force)
+    }
+    addAfter(route: string, method: string, callback: (req: BuchtaRequest, res: BuchtaResponse) => void, force: boolean) {
+        this.router.addAfter(route, method, callback, force)
+    }
+
     get: route;
     post: route;
     put: route;
