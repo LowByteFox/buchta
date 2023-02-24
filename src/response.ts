@@ -61,7 +61,7 @@ export class BuchtaResponse {
 
     buildResponse() {
         if (this.filePath)
-            return new Response(readFileSync(this.filePath), {
+            return new Response(Bun.file(this.filePath), {
                 status: this.statusCode,
                 statusText: this.statusText,
                 headers: this.headers,

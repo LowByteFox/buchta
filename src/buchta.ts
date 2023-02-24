@@ -10,7 +10,7 @@ import { BuchtaSubrouter } from "./utils/subrouter";
 import { colors, customLog } from "./utils/colors";
 import { fswatch } from "./utils/fswatch";
 import { chdir, exit } from "process";
-import { errorPage } from "./utils/pages";
+import { errorPage, errorPageTrace } from "./utils/pages";
 import { awaitImportRegex, cjsModuleRegex, esModuleRegex, esNormalModule } from "./utils/utils";
 import { match } from "assert";
 
@@ -515,6 +515,14 @@ export class Buchta {
                 if (buchtaRes.canRedirect()) return buchtaRes.buildRedirect()
 
                 return buchtaRes.buildResponse();
+            },
+            error(error: Error) {
+                console.log(error);
+                return new Response(errorPageTrace(`${error}`, error.stack), {
+                    headers: {
+                        "Content-Type": "text/html"
+                    }
+                })
             },
             port: serverPort,
             development: true,
