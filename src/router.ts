@@ -1,7 +1,9 @@
 import { BuchtaRequest } from './request';
 import { BuchtaResponse } from './response';
+import { BuchtaSubrouter } from './utils/subrouter';
 
 export type route = (path: string, callback: (req: BuchtaRequest, res: BuchtaResponse) => void, ...data) => void;
+export type routeChain = (path: string, callback: (req: BuchtaRequest, res: BuchtaResponse) => void, ...data) => BuchtaSubrouter;
 
 interface BuchtaRoute {
     b: (req: BuchtaRequest, res: BuchtaResponse) => void,

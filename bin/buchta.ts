@@ -192,4 +192,6 @@ export class BuchtaCLI {
     }
 }
 
-new BuchtaCLI();
+if (Bun.main == import.meta.path) {
+    new BuchtaCLI();
+}

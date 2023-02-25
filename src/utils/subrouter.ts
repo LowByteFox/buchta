@@ -1,4 +1,4 @@
-import { route } from "../router";
+import { routeChain } from "../router";
 import { BuchtaRequest } from "../request";
 import { BuchtaResponse } from "../response";
 import { Buchta } from "../buchta";
@@ -6,16 +6,17 @@ import { Buchta } from "../buchta";
 export class BuchtaSubrouter {
     private data: any = [];
 
-    get: route;
-    post: route;
-    put: route;
-    delete: route;
+    get: routeChain;
+    post: routeChain;
+    put: routeChain;
+    delete: routeChain;
 
     constructor() {
         let methods = ["get", "post", "put", "delete"];
         for (let method of methods) {
-            this[method] = (path: string, handler: (req: BuchtaRequest, res: BuchtaResponse) => void) => {
+            this[method] = (path: string, handler: (req: BuchtaRequest, res: BuchtaResponse) => BuchtaSubrouter) => {
                 this.data.push([method, this.healRoute(path), handler]);
+                return this;
             };
         }
     }
