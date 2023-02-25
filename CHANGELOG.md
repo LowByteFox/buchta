@@ -119,3 +119,5 @@ So if you used it in before middleware, everything ends
 * `404.html` lets you create custom 404 page
 
 * `BuchtaResponse` supports method chaining
+
+* `BuchtaSubrouter` supports method chaining
