@@ -59,9 +59,10 @@ export class BuchtaResponse {
         return Response.redirect(this.redirectTarget);
     }
 
-    async buildResponse() {
+    buildResponse() {
         if (this.file)
-            return new Response(await this.file.text(), {
+            // @ts-ignore it works just file
+            return new Response(this.file.stream(), {
                 status: this.statusCode,
                 statusText: this.statusText,
                 headers: this.headers,

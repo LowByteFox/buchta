@@ -513,11 +513,8 @@ export class Buchta {
                 if (res?.then) await res;
 
                 if (buchtaRes.canRedirect()) return buchtaRes.buildRedirect()
-
-                res = buchtaRes.buildResponse();
-                if (res?.then) await res;
-                
-                return res;
+                               
+                return buchtaRes.buildResponse();
             },
             error(error: Error) {
                 console.log(error);
