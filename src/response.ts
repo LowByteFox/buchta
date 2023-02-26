@@ -1,12 +1,9 @@
-import { readFileSync } from "fs";
-const mimeLook = require("mime-types");
-
 export class BuchtaResponse {
     private statusCode: number;
     private headers: Headers;
     private statusText: string;
     private body: string | Uint8Array;
-    private filePath: string;
+    private file: Blob | null;
     private redirectTarget: string;
 
     constructor() {
@@ -14,7 +11,7 @@ export class BuchtaResponse {
         this.headers = new Headers();
         this.statusText = "";
         this.body = "";
-        this.filePath = null;
+        this.file = null;
     }
 
     setHeader(name: string, value: string) {
@@ -34,12 +31,8 @@ export class BuchtaResponse {
     }
 
     sendFile(filePath: string) {
-        if (mimeLook) {
-            const mime = mimeLook.lookup(`.${filePath.replace("ts", "js").split(".").pop()}`);
-            if (mime)
-                this.setHeader("Content-Type", mime);
-        }
-        this.filePath = filePath;
+        this.file = Bun.file(filePath);
+        this.headers.set("Content-Type", this.file.type);
         return this;
     }
 
@@ -66,9 +59,9 @@ export class BuchtaResponse {
         return Response.redirect(this.redirectTarget);
     }
 
-    buildResponse() {
-        if (this.filePath)
-            return new Response(Bun.file(this.filePath), {
+    async buildResponse() {
+        if (this.file)
+            return new Response(await this.file.text(), {
                 status: this.statusCode,
                 statusText: this.statusText,
                 headers: this.headers,

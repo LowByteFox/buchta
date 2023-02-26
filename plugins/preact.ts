@@ -9,13 +9,11 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { basename, dirname } from "path";
 import { chdir } from "process";
 
-import * as UglifyJS from "uglify-js";
 import { BuchtaCLI, BuchtaProjectOption, BuchtaQuestionType } from "../bin/buchta";
 
 export interface buchtaPreactConf {
     ssr?: boolean;
     tsx?: boolean;
-    minify?: boolean;
 }
 
 // TODO: Make plugin new CLI compatible
@@ -126,12 +124,6 @@ ${code}
             console.write(beforeHtml);
             htmls.set(route, output.slice(output.indexOf("<")));
             chdir("../..");
-        }
-
-        if (opts?.minify) {
-            const out = UglifyJS.minify(code, {compress: false});
-            if (typeof out.code != "undefined" && typeof out.error != "undefined")
-                code = out.code;
         }
 
         if (route.endsWith(".jsx") || route.endsWith(".tsx")) {

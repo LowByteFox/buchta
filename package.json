@@ -37,10 +37,8 @@
   },
   "dependencies": {
     "marked": "^4.2.12",
-    "mime-types": "^2.1.35",
     "preact": "^10.11.3",
     "preact-render-to-string": "^5.2.6",
-    "svelte": "^3.55.1",
-    "uglify-js": "^3.17.4"
+    "svelte": "^3.55.1"
   }
 }

@@ -11,12 +11,10 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { basename, dirname } from "path";
 import { chdir } from "process";
 
-import * as UglifyJS from "uglify-js";
 import { BuchtaCLI, BuchtaProjectOption, BuchtaQuestionType } from "../bin/buchta";
 
 export interface buchtaSvelteConf {
     ssr?: boolean;
-    minify?: boolean;
 }
 
 /**
@@ -142,12 +140,6 @@ ${code}
                 hydrate: true
             });
             `;
-        }
-
-        if (opts?.minify) {
-            const out = UglifyJS.minify(code, {compress: false});
-            if (typeof out.code != "undefined" && typeof out.error != "undefined")
-                code = out.code;
         }
 
         if (route.endsWith(".svelte")) {
