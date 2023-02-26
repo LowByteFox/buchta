@@ -12,9 +12,6 @@ import { fswatch } from "./utils/fswatch";
 import { chdir, exit } from "process";
 import { errorPage, errorPageTrace } from "./utils/pages";
 import { awaitImportRegex, cjsModuleRegex, esModuleRegex, esNormalModule } from "./utils/utils";
-import { match } from "assert";
-
-const mimeLook = require("mime-types");
 
 export class Buchta {
     [x: string]: any;
@@ -228,7 +225,7 @@ export class Buchta {
 
         files.forEach(file => {
             const route = file.slice(path.length);
-            
+
             this.get(route, (_req: BuchtaRequest, res: BuchtaResponse) => {
                 res.sendFile(file);
             });
@@ -616,7 +613,7 @@ server.get("${dirname(pth)}", (r: any, s: any) => { s.sendFile(import.meta.dir +
                         const req = await fetch(`localhost:${this.getPort()}/${pth}`);
                         const text = this.replaceImports(await req.text());
                         const ctype = req.headers.get("Content-Type").replace("text/javascript", "application/javascript");
-                        const targetExt = mimeLook.extension(ctype);
+                        const targetExt = ctype.split(";")[0].split("/")[1].replace("javascript", "js").replace("markdown", "md");
                         const routePath = "." + pth.replace("." + ext, "." + targetExt);
                         if (targetExt) {
                             serverCode += `
