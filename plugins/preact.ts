@@ -253,7 +253,6 @@ ${code}
 
             opts.set("tsx", {pretty: "Do you want TSX?", type: BuchtaQuestionType.YES_OR_NO});
             opts.set("ssr", {pretty: "Do you want SSR?", type: BuchtaQuestionType.YES_OR_NO});
-            opts.set("minify", {pretty: "Minify code?", type: BuchtaQuestionType.YES_OR_NO});
             opts.set("livereload", {pretty: "Enable livereload?", type: BuchtaQuestionType.YES_OR_NO});
 
             this.setTemplateOptions("preact", opts);
@@ -299,7 +298,7 @@ export default {
             // @ts-ignore It is there
             `${/(y|yes)/i.exec(opts.get("ssr")?.value) ? "true" : "false"},`+
             // @ts-ignore It is there
-            ` minify: ${/(y|yes)/i.exec(opts.get("minify")?.value) ? "true" : "false"}
+            `
         }), `+
     // @ts-ignore It is there
     `${/(y|yes)/i.exec(opts.get("livereload")?.value) ? "livereload()" : " "}]
