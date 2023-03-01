@@ -1,7 +1,7 @@
-# Buchta
+# Buchta 0.5-rc5 ( Last release candidate )
 ## Full Stack Framework Powered By Bun
 
-<img src="./buchta_construction4.png" alt="Buchta Logo" width="512"/>
+<img src="./buchta_construction5.png" alt="Buchta Logo" width="512"/>
 
 ## Get Started
 

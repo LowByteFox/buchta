@@ -511,7 +511,7 @@ export class Buchta {
 
                 if (buchtaRes.canRedirect()) return buchtaRes.buildRedirect()
                                
-                return buchtaRes.buildResponse();
+                return await buchtaRes.buildResponse();
             },
             error(error: Error) {
                 console.log(error);
@@ -745,5 +745,5 @@ server.get("/bundle.js", (r: any, s: any) => { s.sendFile(import.meta.dir + "/" 
 }
 
 export function get_version() {
-    return "0.5-rc4";
+    return "0.5-rc5";
 }

@@ -123,3 +123,5 @@ So if you used it in before middleware, everything ends
 * `BuchtaSubrouter` supports method chaining
 
 * Now there are no dependencies what so ever
+
+* Fixed crashing once again
