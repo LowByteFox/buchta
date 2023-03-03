@@ -22,13 +22,13 @@ export const hideImports = (code: string, onFind) => {
 export const fixRoute = (route: string, buildMode: boolean, defaultFileName: string, ext: string, newExt: string) => {
     if (buildMode) {
         if (route.endsWith(defaultFileName + "." + ext)) {
-            return dirname(route);
+            return dirname(route) + "/";
         }
         return route.slice(0, route.length - ext.length) + newExt;
 
     } else {
         if (route.endsWith(defaultFileName + "." + ext)) {
-            return dirname(route);
+            return dirname(route) + "/";
         }
         return route;
     }

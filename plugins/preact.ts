@@ -173,7 +173,7 @@ ${code}
             }
             patched.set(route, arr);
             // @ts-ignore It is there
-        }).replaceAll("jsxEl", "_jsxEl").replaceAll("JSXFrag", "_JSXFrag"), fixRoute(route, this.buildMode, this.getDefaultFileName(), ext, "js"));
+        }).replaceAll("jsxEl", "_jsxEl").replaceAll("JSXFrag", "_JSXFrag"), fixRoute(route, this.buildMode, this.getDefaultFileName(), ext.slice(1), "js"));
 
         if (opts.ssr) {
             preSSR(route, code, this.getDefaultFileName(), ext);

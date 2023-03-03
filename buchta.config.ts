@@ -8,9 +8,8 @@ export default {
     // @ts-ignore yes there is import.meta.dir
     rootDirectory: import.meta.dir,
 
-    plugins: [markdown(), svelte({ ssr: true, minify: true }), preact({
+    plugins: [markdown(), svelte({ ssr: true }), preact({
         ssr: true,
         tsx: true,
-        minify: true
     }), livereload()]
 }
