@@ -124,4 +124,6 @@ So if you used it in before middleware, everything ends
 
 * Now there are no dependencies what so ever
 
-* Fixed crashing once again
+* Fixed crashing once 
+
+* Fixed google Indexing

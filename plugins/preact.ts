@@ -1,7 +1,7 @@
 import { Buchta } from "../src/buchta";
 import { BuchtaRequest } from "../src/request";
 import { BuchtaResponse } from "../src/response";
-import { awaitImportRegex, cjsModuleRegex, hideImports, showImportsSSR } from "../src/utils/utils";
+import { awaitImportRegex, cjsModuleRegex, fixRoute, hideImports, showImportsSSR } from "../src/utils/utils";
 
 // @ts-ignore It is there
 import { spawnSync } from "bun";
@@ -173,7 +173,7 @@ ${code}
             }
             patched.set(route, arr);
             // @ts-ignore It is there
-        }).replaceAll("jsxEl", "_jsxEl").replaceAll("JSXFrag", "_JSXFrag"), route);
+        }).replaceAll("jsxEl", "_jsxEl").replaceAll("JSXFrag", "_JSXFrag"), fixRoute(route, this.buildMode, this.getDefaultFileName(), ext, "js"));
 
         if (opts.ssr) {
             preSSR(route, code, this.getDefaultFileName(), ext);

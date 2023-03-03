@@ -19,6 +19,21 @@ export const hideImports = (code: string, onFind) => {
     });
 }
 
+export const fixRoute = (route: string, buildMode: boolean, defaultFileName: string, ext: string, newExt: string) => {
+    if (buildMode) {
+        if (route.endsWith(defaultFileName + "." + ext)) {
+            return dirname(route);
+        }
+        return route.slice(0, route.length - ext.length) + newExt;
+
+    } else {
+        if (route.endsWith(defaultFileName + "." + ext)) {
+            return dirname(route);
+        }
+        return route;
+    }
+}
+
 export const showImportsSSR = (code: string, patched: Map<string, string[]>, route: string, basePath: string): string => {
     if (patched.has(route)) {
         const obj = patched.get(route);

@@ -1,7 +1,7 @@
 import { Buchta } from "../src/buchta";
 import { BuchtaRequest } from "../src/request";
 import { BuchtaResponse } from "../src/response";
-import { awaitImportRegex, cjsModuleRegex, hideImports, showImportsSSR } from "../src/utils/utils";
+import { awaitImportRegex, cjsModuleRegex, fixRoute, hideImports, showImportsSSR } from "../src/utils/utils";
 
 import { compile } from "svelte/compiler";
 
@@ -205,7 +205,7 @@ ${code}
                         generate: "ssr"
                     });
 
-                    const code = hideImports(assignBuchtaRoute(js.code, route, composables || ""), (match: string) => {
+                    const code = hideImports(assignBuchtaRoute(js.code, fixRoute(route, this.buildMode, this.getDefaultFileName(), "svelte", "js"), composables || ""), (match: string) => {
                         const arr = patched.get(route) || [];
                         if (!arr.includes(match)) {
                             arr.push(match);
@@ -221,7 +221,7 @@ ${code}
                     hydratable: true
                 });
 
-                const code2 = hideImports(assignBuchtaRoute(csr.js.code, route, composables || ""), (match) => {
+                const code2 = hideImports(assignBuchtaRoute(csr.js.code, fixRoute(route, this.buildMode, this.getDefaultFileName(), "svelte", "js"), composables || ""), (match) => {
                     const arr = patched.get(route) || [];
                     if (!arr.includes(match)) {
                         arr.push(match);
