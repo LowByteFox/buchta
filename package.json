@@ -35,6 +35,5 @@
   "devDependencies": {
     "bun-types": "^0.1.11"
   },
-  "dependencies": {
-  }
+  "dependencies": {}
 }
