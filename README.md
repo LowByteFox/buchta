@@ -6,19 +6,9 @@
 ## Get Started
 
 ```
-bun run buchta init # create project template
-bun run buchta serve # start built-in server
-```
-
-## Working with testing server
-to have better docs readability
-```
-git clone https://github.com/Fire-The-Fox/buchta.git
-cd buchta
+bunx buchta init <project-name>
+cd <project-name>
 bun install
-bun add marked svelte
-bun run src/example.ts
-# open browser and type localhost:3000/
 ```
 
 ### Changelog
