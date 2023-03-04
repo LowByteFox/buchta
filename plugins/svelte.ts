@@ -133,7 +133,9 @@ ${code}
             console.write(beforeHtml);
             htmls.set(route, output.slice(output.indexOf("<")));
             chdir("../..");
-            
+        }
+
+        if (route.endsWith("/")) {
             code += `
             new Component({
                 target: document.body,

@@ -2,7 +2,7 @@
   "name": "buchta",
   "description": "Full-Stack Framework Powered By Bun",
   "module": "src/buchta.ts",
-  "version": "0.5.1",
+  "version": "0.5.11",
   "contributors": [
     "Ján Gajdoš <gajdos.jan77@gmail.com>"
   ],
