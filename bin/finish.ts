@@ -1,6 +1,24 @@
 import { existsSync, mkdirSync, writeFileSync } from "fs";
 import { basename, dirname } from "path";
-import { BuchtaCLI, BuchtaProjectOption, BuchtaQuestionType } from "./buchta";
+import { BuchtaCLI } from "./buchta";
+
+enum BuchtaQuestionType {
+    YES_OR_NO = 16514,
+    TEXT_INPUT,
+    SELECT
+}
+
+interface BuchtaProjectOption {
+    pretty: string;
+    value?: string;
+    type: BuchtaQuestionType;
+    selectData?: string[];
+}
+
+interface BuchtaPluginTemplate {
+    filename: string;
+    content: string;
+}
 
 export function finishBootstrap(this: BuchtaCLI) {
     const name = basename(process.cwd());

@@ -20,6 +20,7 @@
   },
   "keywords": [
     "buchta",
+    "bun",
     "framework",
     "web",
     "http",
@@ -27,18 +28,13 @@
     "router",
     "app",
     "api",
-    "csr",
+    "ssr",
     "plugins"
   ],
   "types": "index.d.ts",
   "devDependencies": {
-    "@types/node": "^18.7.14",
     "bun-types": "^0.1.11"
   },
   "dependencies": {
-    "marked": "^4.2.12",
-    "preact": "^10.11.3",
-    "preact-render-to-string": "^5.2.6",
-    "svelte": "^3.55.1"
   }
 }
