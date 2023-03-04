@@ -27,7 +27,7 @@ export function addFile(this: BuchtaCLI) {
                 mkdirSync("templates");
             
             if (existsSync("templates/" + data.filename) && !this.args.includes("--force")) {
-                console.log(`Error: Plugin "${this.args[1]}" already exists! Remove it or pass "--force" argument\n`);
+                console.log(`Error: Plugin Template "${this.args[1]}" already exists! Remove it or pass "--force" argument\n`);
                 return 0;
             }
 
