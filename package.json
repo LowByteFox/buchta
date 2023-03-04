@@ -2,7 +2,7 @@
   "name": "buchta",
   "description": "Full-Stack Framework Powered By Bun",
   "module": "src/buchta.ts",
-  "version": "0.5",
+  "version": "0.5.1",
   "contributors": [
     "Ján Gajdoš <gajdos.jan77@gmail.com>"
   ],
@@ -35,5 +35,5 @@
   "devDependencies": {
     "bun-types": "^0.1.11"
   },
-  "dependencies": {}
+  "dependencies": { "preact": "^10.13.0", "svelte": "^3.55.1" }
 }
