@@ -1,9 +1,15 @@
 import { Buchta } from "../src/buchta";
 import { BuchtaRequest } from "../src/request";
 import { BuchtaResponse } from "../src/response";
-import { awaitImportRegex, cjsModuleRegex, fixRoute, hideImports, showImportsSSR } from "../src/utils/utils";
+import { fixRoute, hideImports, showImportsSSR } from "../src/utils/utils";
 
-import { compile } from "svelte/compiler";
+let compile = null;
+
+try {
+    compile = require("svelte/compiler").compile;
+} catch (e) {
+
+}
 
 // @ts-ignore It is there
 import { spawnSync } from "bun";
@@ -150,7 +156,7 @@ ${code}
                 res.setHeader("Content-Type", "text/javascript");
             });
         } else {
-            this.get(route, (req: BuchtaRequest, res: BuchtaResponse) => {
+            this.get(route, (_req: BuchtaRequest, res: BuchtaResponse) => {
                 res.send(svelteHTML.call(this, code, htmls.get(route) || ""));
                 res.setHeader("Content-Type", "text/html; charset=utf-8");
             });
@@ -196,6 +202,9 @@ ${code}
 
     return function (this: Buchta | BuchtaCLI) {
         if (this instanceof Buchta) {
+            if (!compile) { 
+                throw new Error("Svelte not installed!");
+            }
             this.assignExtHandler("svelte", function(route: string, file: string) {
                 if (patched.has(route)) {
                     patched.set(route, []);

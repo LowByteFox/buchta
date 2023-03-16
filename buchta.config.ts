@@ -1,3 +1,4 @@
+import { elysia } from "./plugins/elysia";
 import { markdown } from "./plugins/markdown";
 import { svelte } from "./plugins/svelte";
 import { preact } from "./plugins/preact";
@@ -8,7 +9,9 @@ export default {
     // @ts-ignore yes there is import.meta.dir
     rootDirectory: import.meta.dir,
 
-    plugins: [markdown(), svelte({ ssr: true }), preact({
+    plugins: [
+        elysia(),
+        markdown(), svelte({ ssr: false }), preact({
         ssr: true,
         tsx: true,
     }), livereload()]

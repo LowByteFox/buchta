@@ -1,23 +1,22 @@
 {
   "name": "buchta",
-  "description": "Full-Stack Framework Powered By Bun",
-  "module": "src/buchta.ts",
-  "version": "0.5.11",
-  "contributors": [
-    "Ján Gajdoš <gajdos.jan77@gmail.com>"
-  ],
-  "bin": {
-    "buchta": "bin/buchta.ts"
-  },
-  "scripts": {
-    "buchta": "bin/buchta.ts"
-  },
-  "main": "src/buchta.ts",
-  "license": "ISC",
+  "version": "0.5.2",
   "repository": {
     "type": "git",
     "url": "https://github.com/Fire-The-Fox/buchta.git"
   },
+  "main": "src/buchta.ts",
+  "module": "src/buchta.ts",
+  "devDependencies": {
+    "bun-types": "^0.1.11"
+  },
+  "bin": {
+    "buchta": "bin/buchta.ts"
+  },
+  "contributors": [
+    "Ján Gajdoš <gajdos.jan77@gmail.com>"
+  ],
+  "description": "Full-Stack Framework Powered By Bun",
   "keywords": [
     "buchta",
     "bun",
@@ -31,9 +30,9 @@
     "ssr",
     "plugins"
   ],
-  "types": "index.d.ts",
-  "devDependencies": {
-    "bun-types": "^0.1.11"
+  "license": "ISC",
+  "scripts": {
+    "buchta": "bin/buchta.ts"
   },
-  "dependencies": { "preact": "^10.13.0", "svelte": "^3.55.1" }
+  "types": "index.d.ts"
 }

@@ -1,9 +1,12 @@
+import { readFileSync } from "fs";
+
 export class BuchtaResponse {
     private statusCode: number;
     private headers: Headers;
     private statusText: string;
     private body: string | Uint8Array;
     private file: Blob | null;
+    private path;
     private redirectTarget: string;
 
     constructor() {
@@ -31,6 +34,7 @@ export class BuchtaResponse {
     }
 
     sendFile(filePath: string) {
+        this.path = filePath;
         this.file = Bun.file(filePath);
         this.headers.set("Content-Type", this.file.type);
         return this;
@@ -57,6 +61,22 @@ export class BuchtaResponse {
 
     buildRedirect() {
         return Response.redirect(this.redirectTarget);
+    }
+
+    buildResponseSync() {
+        if (this.file)
+            // @ts-ignore it works just file
+            return new Response(readFileSync(this.path), {
+                status: this.statusCode,
+                statusText: this.statusText,
+                headers: this.headers,
+            });
+            
+        return new Response(this.body, {
+            status: this.statusCode,
+            statusText: this.statusText,
+            headers: this.headers,
+        });
     }
 
     async buildResponse() {

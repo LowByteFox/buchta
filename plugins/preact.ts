@@ -1,7 +1,7 @@
 import { Buchta } from "../src/buchta";
 import { BuchtaRequest } from "../src/request";
 import { BuchtaResponse } from "../src/response";
-import { awaitImportRegex, cjsModuleRegex, fixRoute, hideImports, showImportsSSR } from "../src/utils/utils";
+import { fixRoute, hideImports, showImportsSSR } from "../src/utils/utils";
 
 // @ts-ignore It is there
 import { spawnSync } from "bun";
@@ -158,7 +158,7 @@ ${code}
         });
 
         if (opts.ssr == undefined) throw new Error("ssr field in config is missing!");
-        let code;
+        let code: string;
         if (opts.ssr) {
             code = `import { h, hydrate, Fragment } from "preact";import render from "preact-render-to-string";\n${transpiler.transformSync(content, {})}\n`;
         } else {
@@ -166,7 +166,7 @@ ${code}
         }
 
         // @ts-ignore It is there
-        code = assignBuchtaRoute(hideImports(code, (match) => {
+        code = assignBuchtaRoute(hideImports(code, (match: string) => {
             const arr = patched.get(route) || [];
             if (!arr.includes(match)) {
                 arr.push(match);

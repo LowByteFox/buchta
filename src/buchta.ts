@@ -446,7 +446,7 @@ export class Buchta {
 
     /**
      * Run the server
-     * @param {number} [serverPort=3000] - p    ort on which will the server run
+     * @param {number} [serverPort=3000] - port on which will the server run
      * @param {Function} [func=undefined] - function that will run after the server has started
      */
     run = (serverPort: number = 3000, func?: Function, server = this) => {
