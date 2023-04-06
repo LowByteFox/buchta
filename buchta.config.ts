@@ -1,4 +1,3 @@
-import { elysia } from "./plugins/elysia";
 import { markdown } from "./plugins/markdown";
 import { svelte } from "./plugins/svelte";
 import { preact } from "./plugins/preact";
@@ -10,7 +9,6 @@ export default {
     rootDirectory: import.meta.dir,
 
     plugins: [
-        elysia(),
         markdown(), svelte({ ssr: false }), preact({
         ssr: true,
         tsx: true,
