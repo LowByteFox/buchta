@@ -3,6 +3,7 @@ import { svelte } from "./plugins/svelte";
 import { preact } from "./plugins/preact";
 import { livereload } from "./plugins/livereload";
 
+// Nothing to see here 👀
 export default {
     port: 3000,
     // @ts-ignore yes there is import.meta.dir

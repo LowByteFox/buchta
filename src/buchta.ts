@@ -47,14 +47,6 @@ export class Buchta {
     delete: route;
 
     constructor(config?: any, buildMode = false) {
-        const [ maj, min, pat ] = Bun.version.split(".");
-
-        if (parseInt(maj) > 0) {
-            throw new Error("You can't run buchta on newer bun, why? HaVe YoU hEaRd Of FuCkInG eLySiA?????? HAHAHA I WENT INSANE!!!");
-        } else if (parseInt(min) > 5) {
-            throw new Error("You can't run buchta on newer bun, why? HaVe YoU hEaRd Of FuCkInG eLySiA?????? HAHAHA I WENT INSANE!!!");
-        }
-
         const methods = ["get", "post", "put", "delete"];
         for (const method of methods) {
             this[method] = (path: string, handler: (req: BuchtaRequest, res: BuchtaResponse) => void, data: any) => {
