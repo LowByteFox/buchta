@@ -1,14 +1,19 @@
-import { routeChain } from "../router";
-import { BuchtaRequest } from "../request";
-import { BuchtaResponse } from "../response";
-import { Buchta } from "../buchta";
+import { routeChain } from "./router.js";
+import { BuchtaRequest } from "./request.js";
+import { BuchtaResponse } from "./response.js";
 
 export class BuchtaSubrouter {
+    [x: string]: any;
+
     private data: any = [];
 
+    // @ts-ignore it does
     get: routeChain;
+    // @ts-ignore it does
     post: routeChain;
+    // @ts-ignore it does
     put: routeChain;
+    // @ts-ignore it does
     delete: routeChain;
 
     constructor() {
@@ -28,6 +33,9 @@ export class BuchtaSubrouter {
         return path;
     }
 
+    // WARN: must be fixed
+    //
+    // @ts-ignore later
     putInto(app: Buchta, path: string) {
         path = this.healRoute(path);
 

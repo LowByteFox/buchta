@@ -1,17 +1,9 @@
-import { markdown } from "./plugins/markdown";
-import { svelte } from "./plugins/svelte";
-import { preact } from "./plugins/preact";
-import { livereload } from "./plugins/livereload";
+import { svelte } from "./plugins/svelte.js";
 
-// Nothing to see here 👀
 export default {
     port: 3000,
-    // @ts-ignore yes there is import.meta.dir
-    rootDirectory: import.meta.dir,
 
-    plugins: [
-        markdown(), svelte({ ssr: false }), preact({
-        ssr: true,
-        tsx: true,
-    }), livereload()]
+    root: import.meta.dir,
+
+    plugins: [svelte("svelte")]
 }

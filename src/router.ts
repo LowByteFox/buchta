@@ -1,25 +1,31 @@
-import { BuchtaRequest } from './request';
-import { BuchtaResponse } from './response';
-import { BuchtaSubrouter } from './utils/subrouter';
+import { BuchtaRequest } from './request.js';
+import { BuchtaResponse } from './response.js';
+import { BuchtaSubrouter } from './subrouter.js';
 
-export type route = (path: string, callback: (req: BuchtaRequest, res: BuchtaResponse) => void, ...data) => void;
-export type routeChain = (path: string, callback: (req: BuchtaRequest, res: BuchtaResponse) => void, ...data) => BuchtaSubrouter;
+export type route = (path: string, callback: (req: BuchtaRequest, res: BuchtaResponse) => void, ...data: any[]) => void;
+export type routeChain = (path: string, callback: (req: BuchtaRequest, res: BuchtaResponse) => void, ...data: any[]) => BuchtaSubrouter;
 
 interface BuchtaRoute {
-    b: (req: BuchtaRequest, res: BuchtaResponse) => void,
+    b: ((req: BuchtaRequest, res: BuchtaResponse) => void) | null,
     f: (req: BuchtaRequest, res: BuchtaResponse) => void,
-    a: (req: BuchtaRequest, res: BuchtaResponse) => void,
+    a: ((req: BuchtaRequest, res: BuchtaResponse) => void) | null,
     path: string,
 }
 
 export class Router {
+    [x: string]: any;
+
     routes: Map<string, BuchtaRoute> = new Map();
     preParams: Map<string, Map<string, number>> = new Map();
     params: Map<string, string> = new Map();
 
+    // @ts-ignore it does
     get: route;
+    // @ts-ignore it does
     post: route;
+    // @ts-ignore it does
     put: route;
+    // @ts-ignore it does
     delete: route;
 
     constructor() {
@@ -76,7 +82,7 @@ export class Router {
         }
     }
 
-    handle(path: string, method: string): BuchtaRoute {
+    handle(path: string, method: string): BuchtaRoute | null {
         path = `${method}/${this.healRoute(path)}`;
         for (const [route, handler] of this.routes) {
             const routeParts = route.split("/");

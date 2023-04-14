@@ -4,3 +4,6 @@ bun.lockb
 .buchta/
 dist/
 .dccache
+middleware/
+composables/
+templates/

@@ -1,6 +1,4 @@
 {
-    "include": ["src/**/*", "bin/**/*", "composables/**/*"],
-    "exclude": ["src/**/example.ts", "dist/**/*"],
     "compilerOptions": {
         "lib": [
             "ESNext"
