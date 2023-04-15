@@ -1,3 +1,4 @@
+// "Sometimes, you have to be cruel to be kind." - Kel
 import { routeChain } from "./router.js";
 import { BuchtaRequest } from "./request.js";
 import { BuchtaResponse } from "./response.js";

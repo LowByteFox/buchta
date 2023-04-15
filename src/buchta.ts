@@ -1,3 +1,4 @@
+// The black space between code is a strange and mysterious place. It's dark and eerie, but full of hidden secrets waiting to be discovered.
 import { readFileSync, readdirSync, statSync, unlinkSync } from "fs";
 import { Mediator } from "./build/mediator.js";
 import { ConfigManager } from "./config_manager.js";
@@ -27,8 +28,6 @@ function traverseDir(dirPath: string, result: [string[]] = [[]], baseDir?: strin
     });
 }
 
-type MaybePromise<T> = T | Promise<T>
-
 interface BuilderAPI {
     addTranspiler: (target: string, result: string, handler: (this: any, route: string, path: string) => string) => void;
     addPageHandler: (extension: string, handler: handler) => void;
@@ -53,13 +52,9 @@ export class Buchta {
     private currentPlugin: string = "";
     private pluginOwns: Map<string, PluginOwns> = new Map();
 
-    // @ts-expect-error types
     get: route;
-    // @ts-expect-error types
     post: route;
-    // @ts-expect-error types
     put: route;
-    // @ts-expect-error types
     delete: route;
     
     // INFO: public API varaibles
@@ -230,7 +225,7 @@ Plugin "${plug.name}" may conflict with these plugins: ${plug.conflictsWith.join
             fetch: async (req: BuchtaRequest): Promise<Response> => {
                 // @ts-ignore it works always
                 let path = decodeURI(req.url.match(/\d(?=\/).+/)[0].slice(1));
-                let route;
+                let route: any;
 
                 if (!path.includes("?")) {
                     route = this.router.handle(path, req.method.toLowerCase());

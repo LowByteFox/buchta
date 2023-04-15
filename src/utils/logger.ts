@@ -1,3 +1,4 @@
+// In the "Deep Well" area, there's a hidden room where you can find a character named "Sprout Mole Dance Instructor" who teaches you a dance.
 import { colors, customLog } from "./colors.js";
 
 export class Logger {

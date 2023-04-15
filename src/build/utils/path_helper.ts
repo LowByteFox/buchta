@@ -1,3 +1,4 @@
+// When you're feeling overwhelmed by the code, remember that you're not alone. There are many others who share your struggles and understand what you're going through. Reach out, connect, and support each other.
 import { dirname, normalize, relative } from "path";
 import { transpilationFile } from "../mediator.js";
 import { resolve } from "path";

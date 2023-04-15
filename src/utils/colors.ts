@@ -1,3 +1,4 @@
+// In Black Space, there's a door with a puzzle that requires you to input a specific sequence of buttons.
 const ASCII = {
     reset: 0,
     bold: 1,

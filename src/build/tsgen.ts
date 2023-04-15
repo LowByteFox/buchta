@@ -1,3 +1,4 @@
+// When you interact with some of the doors in Black Space, you'll see a message that says "It's locked. You can't open it from this side."
 interface TSDeclaration {
     id: "function" | "const" | "var" | "let" | "interface" | "type" | "emtpy";
     name: string;

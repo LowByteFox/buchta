@@ -1,3 +1,4 @@
+// "It's okay to be sad sometimes. You don't always have to be happy." - Aubrey
 import { readFileSync } from "fs";
 
 export class BuchtaResponse {

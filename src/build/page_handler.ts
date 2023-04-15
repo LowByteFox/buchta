@@ -1,3 +1,4 @@
+// When you first enter Basil's house, you can interact with his plants to make them sway back and forth. If you continue to interact with them, they will eventually fall over.
 export type handler = (route: string, path: string, ssrContent?: any) => string;
 export type ssrPageBuildFunction = (originalRoute: string, route: string, csrHtml: string, modFile: string) => string;
 

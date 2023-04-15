@@ -1,3 +1,4 @@
+// "In this world, it's kill or be killed. And you're not gonna be the one who gets killed." - Omori
 import { BuchtaRequest } from './request.js';
 import { BuchtaResponse } from './response.js';
 import { BuchtaSubrouter } from './subrouter.js';

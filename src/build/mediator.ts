@@ -1,3 +1,4 @@
+// If you sleep in Omori's bed multiple times, you'll start to have some strange dreams.
 import { existsSync, mkdirSync, readdirSync, statSync, writeFileSync } from "fs";
 import { basename, dirname, join, normalize, relative } from "path";
 import { PathResolver } from "./utils/path_helper.js";

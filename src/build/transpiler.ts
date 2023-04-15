@@ -1,3 +1,4 @@
+// In the "Hikikomori Route," you can find a hidden area that references a popular anime by interacting with a painting on the wall multiple times.
 import { readFileSync } from "fs";
 import { transpilationFile } from "./mediator.js";
 
