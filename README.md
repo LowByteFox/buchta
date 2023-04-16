@@ -22,7 +22,7 @@ bun install
 - [x] Type Generation
 - [x] Better plugins
 - [x] Decrease size of plugins
-- [ ] tsconfig.json generation
+- [x] tsconfig.json generation
 - [ ] Custom Configurable Bundle Tools
 - [ ] Globals ( composables )
 - [ ] Static files
