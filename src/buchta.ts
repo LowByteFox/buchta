@@ -33,7 +33,7 @@ interface BuilderAPI {
     addTranspiler: (target: string, result: string, handler: (this: any, route: string, path: string) => string) => void;
     addPageHandler: (extension: string, handler: handler) => void;
     addSsrPageHandler: (extension: string, handler: ssrPageBuildFunction) => void;
-    addType: (extension: string, type: TSDeclaration | string, imports?: string[]) => void;
+    addType: (extension: string, type: TSDeclaration | string, references?: {type: "types" | "path", value: string}[]) => void;
 }
 
 interface PluginOwns {
@@ -70,7 +70,7 @@ export class Buchta {
         for (const m of methods) {
             this[m] = (route: string, handler: route) => {
                 this.router[m](route, handler);
-            }
+           }
         }
         
         let plugins = [];
@@ -129,7 +129,7 @@ export class Buchta {
                 this.pluginOwns.set(this.currentPlugin, plug);
             },
 
-            addType: (extension: string, type: TSDeclaration | string, imports: string[] = []) => {
+            addType: (extension: string, type: TSDeclaration | string, references: {type: "types" | "path", value: string}[] = []) => {
                 if (!this.checkExtensionOwnership(this.currentPlugin, extension)) {
                     console.error(`Plugin "${this.currentPlugin}" is unable to register a type declaration, because another plugin already did it!`);
                     return;
@@ -139,7 +139,7 @@ export class Buchta {
                 if (!plug.fileExtensions.includes(extension)) plug.fileExtensions.push(extension);
 
                 this._builder.setTypeGen(extension, type);
-                this._builder.setTypeImports(extension, imports);
+                this._builder.setTypeImports(extension, references);
 
                 this.pluginOwns.set(this.currentPlugin, plug);
             }

@@ -57,7 +57,7 @@ export function svelte(name: string) {
             if (this.ssr) {
                 this.builder.addSsrPageHandler("svelte", svelteSSRPage);
             }
-            this.builder.addType("svelte", "declare const app: SvelteComponent;\nexport default app;\n", ["import { type SvelteComponent } from \"svelte\";"]);
+            this.builder.addType("svelte", "declare const app: SvelteComponent;\nexport default app;\n", [{type: "types", value: "svelte"}]);
         }
     }
 }

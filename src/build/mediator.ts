@@ -43,7 +43,7 @@ export class Mediator {
     private tsgen: TSGenerator = new TSGenerator();
     private pages: Array<string> = [];
     private typeGens: Map<string, TSDeclaration | string> = new Map();
-    private typeImports: Map<string, string[]> = new Map();
+    private typeImports: Map<string, {type: "types" | "path", value: string}[]> = new Map();
 
     constructor(rootPath: string, ssr = false) {
         this.rootPath = rootPath;
@@ -126,9 +126,9 @@ export class Mediator {
                 const ext = out.originalPath.split(".").pop();
 
                 if (!ignoreExImports.includes(ext)) {
-                    const imports = this.typeImports.get(ext);
+                    const references = this.typeImports.get(ext);
                     ignoreExImports.push(ext);
-                    tree.imports?.push(...imports ?? "");
+                    tree.references = references;
                 }
 
                 const declaration = this.typeGens.get(ext);
@@ -155,6 +155,7 @@ export class Mediator {
         })
 
         writeFileSync(normalize(this.rootPath + "/.buchta/buchta.d.ts"), this.tsgen.toString("/buchta.d.ts"));
+        writeFileSync(normalize(this.rootPath + "/.buchta/tsconfig.json"), this.tsgen.tsconfigGen());
 
         this.mkdir(".buchta/types/");
 
@@ -257,7 +258,7 @@ export class Mediator {
         this.typeGens.set(extension, type)
     }
 
-    setTypeImports(extension: string, imports: string[]) {
+    setTypeImports(extension: string, imports: {type: "types" | "path", value: string}[]) {
         this.typeImports.set(extension, imports);
     }
 }
