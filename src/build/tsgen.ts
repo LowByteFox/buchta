@@ -1,5 +1,5 @@
 // When you interact with some of the doors in Black Space, you'll see a message that says "It's locked. You can't open it from this side."
-interface TSDeclaration {
+export interface TSDeclaration {
     id: "function" | "const" | "var" | "let" | "interface" | "type" | "emtpy";
     name: string;
     func?: {
@@ -12,7 +12,7 @@ interface TSDeclaration {
     value?: string;
 }
 
-interface TSTree {
+export interface TSTree {
     references?: {type: "types" | "path", value: string}[];
     imports?: string[];
     globals?: (TSDeclaration|string)[];
@@ -101,6 +101,7 @@ export class TSGenerator {
     }
 }
 
+/*
 const ts = new TSGenerator();
 
 ts.declarations.push({
@@ -138,3 +139,4 @@ ts.declarations.push({
 })
 
 console.log(ts.toString("/xd.d.ts"));
+*/

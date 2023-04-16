@@ -1,6 +1,5 @@
 <script>
     import Main from "./components/Main.svelte";
-    console.log(buchtaRoute());
 </script>
 
 <div>

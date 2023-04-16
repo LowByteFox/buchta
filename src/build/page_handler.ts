@@ -7,9 +7,12 @@ export class PageHandler {
     private ssrCache: Map<string, string> = new Map();
     private ssrHandler: Map<string, ssrPageBuildFunction> = new Map();
 
-    callHandler(extension: string, route: string, path: string): string {
+    callHandler(extension: string, route: string, path: string): string | null {
         const func = this.handlers.get(extension);
-        if (!func) throw new Error(`Page handler for extension "${extension}" doesn't exist!`);
+        if (!func) {
+            //throw new Error(`Page handler for extension "${extension}" doesn't exist!`);
+            return null;
+        }
 
         return func(route, path);
     }
@@ -30,9 +33,12 @@ export class PageHandler {
         this.ssrHandler.set(extension, handler);
     }
 
-    callSSRHandler(extension: string, originalRoute: string, route: string, csrHtml: string, modFile: string) {
+    callSSRHandler(extension: string, originalRoute: string, route: string, csrHtml: string, modFile: string): string | null {
         const func = this.ssrHandler.get(extension);
-        if (!func) throw new Error(`SSR Page handler for route "${originalRoute}" doesn't exist!`);
+        if (!func) {
+            // (`SSR Page handler for route "${originalRoute}" doesn't exist!`);
+            return null;
+        }
 
         return func(originalRoute, route, csrHtml, modFile);
     }

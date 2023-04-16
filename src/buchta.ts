@@ -1,5 +1,5 @@
 // The black space between code is a strange and mysterious place. It's dark and eerie, but full of hidden secrets waiting to be discovered.
-import { readFileSync, readdirSync, statSync, unlinkSync } from "fs";
+import { readFileSync, readdirSync, statSync } from "fs";
 import { Mediator } from "./build/mediator.js";
 import { ConfigManager } from "./config_manager.js";
 import { Router, route } from "./router.js";
@@ -9,6 +9,7 @@ import { BuchtaRequest } from "./request.js";
 import { BuchtaResponse } from "./response.js";
 import { handler, ssrPageBuildFunction } from "./build/page_handler.js";
 import { tsTranspile } from "./build/transpilers/typescript.js";
+import { TSDeclaration, TSGenerator } from "./build/tsgen.js";
 
 const require = createRequire(import.meta.url);
 
@@ -32,6 +33,7 @@ interface BuilderAPI {
     addTranspiler: (target: string, result: string, handler: (this: any, route: string, path: string) => string) => void;
     addPageHandler: (extension: string, handler: handler) => void;
     addSsrPageHandler: (extension: string, handler: ssrPageBuildFunction) => void;
+    addType: (extension: string, type: TSDeclaration | string, imports?: string[]) => void;
 }
 
 interface PluginOwns {
@@ -41,10 +43,10 @@ interface PluginOwns {
 export class Buchta {
     [x: string]: any;
 
-    // INFO: will have AI methods 
+    // INFO: will have API methods 
     private router = new Router();
     private config = new ConfigManager(`${process.cwd()}/buchta.config.ts`);
-    private _builder: Mediator;
+    private _builder: Mediator; 
     private serveFiles: string[] = [];
 
     // INFO: Plugin infos
@@ -125,6 +127,21 @@ export class Buchta {
                 this._builder.setSSRPageHandler(extension, handler);
 
                 this.pluginOwns.set(this.currentPlugin, plug);
+            },
+
+            addType: (extension: string, type: TSDeclaration | string, imports: string[] = []) => {
+                if (!this.checkExtensionOwnership(this.currentPlugin, extension)) {
+                    console.error(`Plugin "${this.currentPlugin}" is unable to register a type declaration, because another plugin already did it!`);
+                    return;
+                }
+                const plug: PluginOwns = this.pluginOwns.get(this.currentPlugin) ?? {};
+                if (!plug.fileExtensions) plug.fileExtensions = [];
+                if (!plug.fileExtensions.includes(extension)) plug.fileExtensions.push(extension);
+
+                this._builder.setTypeGen(extension, type);
+                this._builder.setTypeImports(extension, imports);
+
+                this.pluginOwns.set(this.currentPlugin, plug);
             }
         }
 
@@ -133,7 +150,6 @@ export class Buchta {
         this._builder.declareTranspilation("ts", "js", tsTranspile);
         this._builder.setPageHandler("html", (_: string, path: string) => {
             const content = readFileSync(path, {"encoding": "utf8"});
-            unlinkSync(path);
             return content;
         });
         this._builder.setSSRPageHandler("html", (_1: string, _2: string, csrHTML: string, ..._: string[]) => {
@@ -161,11 +177,16 @@ Plugin "${plug.name}" may conflict with these plugins: ${plug.conflictsWith.join
         this._builder.transpile();
         this._builder.toFS();
         this._builder.pageGen();
+        this._builder.typeGen();
         const routes = this._builder.pageRouteGen();
         for (const route of routes) {
             if (typeof route.content == "string") {
                 // @ts-ignore types
                 this.get(route.route, async (_: BuchtaRequest, s: BuchtaResponse) => {
+                    s.sendFile(route.path ?? "");
+                });
+
+                this.get(route.originalPath, async (_: BuchtaRequest, s: BuchtaResponse) => {
                     s.sendFile(route.path ?? "");
                 });
             } else {

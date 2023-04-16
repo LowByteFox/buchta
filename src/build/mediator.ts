@@ -5,6 +5,7 @@ import { PathResolver } from "./utils/path_helper.js";
 import { Transpiler } from "./transpiler.js";
 import { PageHandler, handler, ssrPageBuildFunction } from "./page_handler.js";
 import { Bundler } from "./bundler.js";
+import { TSDeclaration, TSGenerator, TSTree } from "./tsgen.js";
 
 function traverseDir(dirPath: string, baseDir: string, result: [string[]] = [[]]) {
     const files = readdirSync(dirPath);
@@ -39,8 +40,10 @@ export class Mediator {
     private ssrPages: Map<string, (originalRoute: string, route: string) => string> = new Map();
     private pageHandler = new PageHandler();
     private bundler: Bundler = new Bundler();
-
+    private tsgen: TSGenerator = new TSGenerator();
     private pages: Array<string> = [];
+    private typeGens: Map<string, TSDeclaration | string> = new Map();
+    private typeImports: Map<string, string[]> = new Map();
 
     constructor(rootPath: string, ssr = false) {
         this.rootPath = rootPath;
@@ -109,6 +112,55 @@ export class Mediator {
         }
     }
 
+    typeGen() {
+        const ignoreExImports: string[] = [];
+
+        const tree: TSTree = {
+            imports: [],
+            modules: []
+        }
+
+        for (const out of this.transpiled) {
+            if (this.pathResolver?.hasTSDeclaration(out.originalPath)) {
+                if (out.originalPath.endsWith("ts") || out.originalPath.endsWith("js")) continue;
+                const ext = out.originalPath.split(".").pop();
+
+                if (!ignoreExImports.includes(ext)) {
+                    const imports = this.typeImports.get(ext);
+                    ignoreExImports.push(ext);
+                    tree.imports?.push(...imports ?? "");
+                }
+
+                const declaration = this.typeGens.get(ext);
+                tree.modules?.push({
+                    name: out.originalPath,
+                    content: [declaration ?? "", {name: "myFunc", id: "function", func: {returnType: `"${out.originalPath}"`}}]
+                });
+            }
+        }
+
+        this.tsgen.declarations.push({
+            path: "/types/pages.d.ts",
+            tree
+        })
+
+        this.tsgen.declarations.push({
+            path: "/buchta.d.ts",
+            tree: {
+                references: [{
+                    type: "path",
+                    value: "types/pages.d.ts"
+                }]
+            }
+        })
+
+        writeFileSync(normalize(this.rootPath + "/.buchta/buchta.d.ts"), this.tsgen.toString("/buchta.d.ts"));
+
+        this.mkdir(".buchta/types/");
+
+        writeFileSync(normalize(this.rootPath + "/.buchta/types/pages.d.ts"), this.tsgen.toString("/types/pages.d.ts"));
+    }
+
     pageGen() {
         const outPath = this.rootPath + "/.buchta/output/";
         const ssrPath = this.rootPath + "/.buchta/output-ssr/";
@@ -123,7 +175,8 @@ export class Mediator {
             if (!ext) continue;
             if (split.join(".") == "index") { 
                 if (ext == "js" || ext == "ts") continue;
-                const out = this.pageHandler.callHandler(ext, input.path, outPath + input.path);
+                const out: string | null = this.pageHandler.callHandler(ext, input.path, outPath + input.path);
+                if (!out) continue;
                 const deps = this.pathResolver?.resolvePageDeps(out, input.path);
 
                 this.ssrPages.set(dirname(input.path), (originalRoute: string, route: string) => {
@@ -182,11 +235,11 @@ export class Mediator {
             mkdirSync(path, { recursive: true });
     }
 
-    pageRouteGen(): {route: string; content: string | Function; path?: string}[] {
-        const arr = [];
+    pageRouteGen(): {route: string; content: string | Function; path?: string; originalPath: string}[] {
+        const arr: any[] = [];
 
         for (const t of this.transpiled) {
-            arr.push({route: t.path, content: t.content, path: normalize(this.rootPath + "/.buchta/output/" + t.path)});
+            arr.push({route: t.path, content: t.content, path: normalize(this.rootPath + "/.buchta/output/" + t.path), originalPath: t.originalPath});
         }
         if (this.ssrStep) {
             for (const [route, page] of this.ssrPages) {
@@ -198,5 +251,13 @@ export class Mediator {
             }
         }
         return arr;
+    }
+
+    setTypeGen(extension: string, type: TSDeclaration | string) {
+        this.typeGens.set(extension, type)
+    }
+
+    setTypeImports(extension: string, imports: string[]) {
+        this.typeImports.set(extension, imports);
     }
 }

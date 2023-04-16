@@ -34,4 +34,7 @@
   "scripts": {
     "buchta": "bin/buchta.ts"
   },
+  "dependencies": {
+    "svelte": "^3.58.0"
+  }
 }

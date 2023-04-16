@@ -52,6 +52,12 @@ export class PathResolver {
         return content.match(this.pathFetch)
     }
 
+    hasTSDeclaration(route: string) {
+        const ext = route.split(".").pop();
+        if (this.res[ext] == "js") return true;
+        return false;
+    }
+
     getOriginalPath(mangled: string) {
         let res = "";
 
@@ -88,11 +94,13 @@ export class PathResolver {
             return {
                 content,
                 path: this.resolved.get(file.route) ?? file.route,
+                originalPath: file.route
             }
         } 
         return {
             content,
             path: this.resolved.get(file.route) ?? file.route,
+            originalPath: file.route
         }
     }
 

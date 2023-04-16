@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
     let count = 0;
     const inc = () => {
         count++;
@@ -7,8 +7,6 @@
     const dec = () => {
         count--;
     }
-
-    console.log(buchtaRoute());
 </script>
 
 <h1>Count is { count }</h1>
