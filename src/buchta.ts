@@ -1,32 +1,18 @@
-// The black space between code is a strange and mysterious place. It's dark and eerie, but full of hidden secrets waiting to be discovered.
-import { readFileSync, readdirSync, statSync } from "fs";
-import { Mediator } from "./build/mediator.js";
-import { ConfigManager } from "./config_manager.js";
-import { Router, route } from "./router.js";
-import { dirname, join, normalize, relative } from "path";
-import { createRequire } from "module";
-import { BuchtaRequest } from "./request.js";
-import { BuchtaResponse } from "./response.js";
-import { handler, ssrPageBuildFunction } from "./build/page_handler.js";
-import { tsTranspile } from "./build/transpilers/typescript.js";
-import { TSDeclaration, TSGenerator } from "./build/tsgen.js";
+import { readFileSync } from "fs";
+import { Mediator } from "./build/mediator";
+import { handler, ssrPageBuildFunction } from "./build/page_handler";
+import { tsTranspile } from "./build/transpilers/typescript";
+import { TSDeclaration } from "./build/tsgen";
+import { BuchtaLogger } from "./utils/logger";
+import devServer from "./dev";
+import { CustomBundle } from "./bundleToolGen";
 
-const require = createRequire(import.meta.url);
-
-function traverseDir(dirPath: string, result: [string[]] = [[]], baseDir?: string) {
-    const files = readdirSync(dirPath);
-    if (!baseDir) baseDir = dirPath;
-
-    files.forEach(file => {
-        const filePath = join(dirPath, file);
-
-        if (statSync(filePath).isDirectory()) {
-            traverseDir(filePath, result, baseDir);
-        } else {
-            const relativePath = relative(baseDir ?? filePath, filePath);
-            result[0].push(relativePath);
-        }
-    });
+export interface BuchtaPlugin {
+    name: string;
+    version: string;
+    dependsOn: string[];
+    conflictsWith: string[];
+    driver?: (this: Buchta) => void;
 }
 
 interface BuilderAPI {
@@ -36,117 +22,77 @@ interface BuilderAPI {
     addType: (extension: string, type: TSDeclaration | string, references?: {type: "types" | "path", value: string}[]) => void;
 }
 
-interface PluginOwns {
-    fileExtensions?: string[];
+export interface BuchtaConfig {
+    rootDir: string;
+    port: number;
+    ssr?: boolean;
+    dirs?: string[];
+    plugins?: BuchtaPlugin[];
 }
 
 export class Buchta {
-    [x: string]: any;
+    private _builder: Mediator;
+    private conf?: BuchtaConfig;
+    logger;
+    private plugins: BuchtaPlugin[];
+    pages: any[] = [];
+    bundle: CustomBundle;
+    private bundleHandlers: Function[] = [];
 
-    // INFO: will have API methods 
-    private router = new Router();
-    private config = new ConfigManager(`${process.cwd()}/buchta.config.ts`);
-    private _builder: Mediator; 
-    private serveFiles: string[] = [];
-
-    // INFO: Plugin infos
-    private registeredPlugins: any[] = [];
-    private currentPlugin: string = "";
-    private pluginOwns: Map<string, PluginOwns> = new Map();
-
-    get: route;
-    post: route;
-    put: route;
-    delete: route;
-    
-    // INFO: public API varaibles
+    builder: BuilderAPI;
     rootDir: string;
     port: number;
     ssr: boolean;
-    builder: BuilderAPI;
+    dirs: string[];
 
-    constructor() {
-        const methods = ["get", "post", "put", "delete"];
-        for (const m of methods) {
-            this[m] = (route: string, handler: route) => {
-                this.router[m](route, handler);
-           }
-        }
-        
-        let plugins = [];
+    attachToBundler(handler: (bun: CustomBundle) => void) {
+        this.bundleHandlers.push(handler);
+    }
 
-        if (this.config.ok) {
-            this.rootDir = this.config.getValue("root") ?? process.cwd();
-            this.port = this.config.getValue("port") ?? 3000;
-            this.ssr = this.config.getValue("ssr") ?? true;
-            plugins = this.config.getValue("plugins") ?? [];
+    constructor(quiet = false, config?: BuchtaConfig) {
+        this.logger = BuchtaLogger(quiet);
+        if (!config) {
+            try {
+                this.conf = require(process.cwd() + "/buchta.config.ts").default;
+                this.logger("Done loading config", "success");
+            } catch (e) {
+                this.logger.error("Failed to load the config: ");
+                console.log(e);
+            }
         } else {
-            this.rootDir = process.cwd();
-            this.port = 3000;
-            this.ssr = true;
+            this.conf = config;
         }
+
+        this.rootDir = this.getOrDef("rootDir", process.cwd());
+        this.port = this.getOrDef("port", 3000);
+        this.ssr = this.getOrDef("ssr", true);
+        this.dirs = this.getOrDef("dirs", ["public"]);
+        this.plugins = this.getOrDef("plugins", []);
 
         this.builder = {
-            addTranspiler: (target: string, result: string, handler: (this: any, route: string, path: string) => string) => {
-                if (!this.checkExtensionOwnership(this.currentPlugin, target)) {
-                    console.error(`Plugin "${this.currentPlugin}" is unable to register a transpiler, because another plugin already did it!`);
-                    return;
-                }
-                const plug: PluginOwns = this.pluginOwns.get(this.currentPlugin) ?? {};
-                if (!plug.fileExtensions) plug.fileExtensions = [];
-                if (!plug.fileExtensions.includes(target)) plug.fileExtensions.push(target);
-
+            addTranspiler: (target, result, handler) => {
                 this._builder.declareTranspilation(target, result, handler);
-
-                this.pluginOwns.set(this.currentPlugin, plug);
             },
-
-            addPageHandler: (extension: string, handler: handler) => {
-                if (!this.checkExtensionOwnership(this.currentPlugin, extension)) {
-                    console.error(`Plugin "${this.currentPlugin}" is unable to register a page handler, because another plugin already did it!`);
-                    return;
-                }
-                const plug: PluginOwns = this.pluginOwns.get(this.currentPlugin) ?? {};
-                if (!plug.fileExtensions) plug.fileExtensions = [];
-                if (!plug.fileExtensions.includes(extension)) plug.fileExtensions.push(extension);
-
+            addPageHandler: (extension, handler) => {
                 this._builder.setPageHandler(extension, handler);
-
-                this.pluginOwns.set(this.currentPlugin, plug);
             },
-
-            addSsrPageHandler: (extension: string, handler: ssrPageBuildFunction) => {
-                if (!this.checkExtensionOwnership(this.currentPlugin, extension)) {
-                    console.error(`Plugin "${this.currentPlugin}" is unable to register a SSR page handler, because another plugin already did it!`);
-                    return;
-                }
-                const plug: PluginOwns = this.pluginOwns.get(this.currentPlugin) ?? {};
-                if (!plug.fileExtensions) plug.fileExtensions = [];
-                if (!plug.fileExtensions.includes(extension)) plug.fileExtensions.push(extension);
-
+            addSsrPageHandler: (extension, handler) => {
                 this._builder.setSSRPageHandler(extension, handler);
-
-                this.pluginOwns.set(this.currentPlugin, plug);
             },
-
-            addType: (extension: string, type: TSDeclaration | string, references: {type: "types" | "path", value: string}[] = []) => {
-                if (!this.checkExtensionOwnership(this.currentPlugin, extension)) {
-                    console.error(`Plugin "${this.currentPlugin}" is unable to register a type declaration, because another plugin already did it!`);
-                    return;
-                }
-                const plug: PluginOwns = this.pluginOwns.get(this.currentPlugin) ?? {};
-                if (!plug.fileExtensions) plug.fileExtensions = [];
-                if (!plug.fileExtensions.includes(extension)) plug.fileExtensions.push(extension);
-
+            addType: (extension, type, references) => {
                 this._builder.setTypeGen(extension, type);
-                this._builder.setTypeImports(extension, references);
-
-                this.pluginOwns.set(this.currentPlugin, plug);
-            }
+            },
         }
 
         this._builder = new Mediator(this.rootDir, this.ssr);
-        this._builder.prepare();
+        this.bundle = new CustomBundle(this.rootDir);
+    }
+
+    async setup() {
+        this.logger.info("Configuring build system");
+        this._builder.prepare(this.dirs);
+        this.bundleHandlers.forEach(b => b(this.bundle));
+        this.bundle.dump();
         this._builder.declareTranspilation("ts", "js", tsTranspile);
         this._builder.setPageHandler("html", (_: string, path: string) => {
             const content = readFileSync(path, {"encoding": "utf8"});
@@ -155,150 +101,48 @@ export class Buchta {
         this._builder.setSSRPageHandler("html", (_1: string, _2: string, csrHTML: string, ..._: string[]) => {
             return csrHTML;
         });
+        this.logger.info("Done configuring build system");
+        this.logger.info("Loading plugins");
 
-        traverseDir(normalize(this.rootDir + "/public/"), [this.serveFiles]);
-        const serverRoutes = this.serveFiles.filter(i => i.match(/.+\.server\.(js|ts)/) ?? false);
-        this.loadServerRoutes(serverRoutes);
-
-        // @ts-ignore it works
-        for (const plug of plugins) {
+        for (const plug of this.plugins) {
             const { driver } = plug;
             delete plug.driver;
-            if (this.checkPluginCompat(plug)) {
-                this.registeredPlugins.push(plug.name);
-                this.currentPlugin = plug.name;
-                driver.call(this);
-            } else {
-                console.log(`Plugin "${plug.name}" may miss these plugins: ${plug.dependsOn.join(", ")}
-Plugin "${plug.name}" may conflict with these plugins: ${plug.conflictsWith.join(", ")}`);
-            }
+            driver?.call(this);
         }
 
+        this.logger.info("Done loading plugins");
+
+        this.logger.info("Executing the build system");
+        this.logger.info("Transpiling");
         this._builder.transpile();
         this._builder.toFS();
-        this._builder.pageGen();
+        this.logger.info("Generating Pages");
+        await this._builder.pageGen();
+        this.logger.info("Generating Types");
         this._builder.typeGen();
-        const routes = this._builder.pageRouteGen();
-        for (const route of routes) {
-            if (typeof route.content == "string") {
-                // @ts-ignore types
-                this.get(route.route, async (_: BuchtaRequest, s: BuchtaResponse) => {
-                    s.sendFile(route.path ?? "");
-                });
 
-                this.get(route.originalPath, async (_: BuchtaRequest, s: BuchtaResponse) => {
-                    s.sendFile(route.path ?? "");
-                });
-            } else {
-                // @ts-ignore types
-                this.get(route.route, (r: BuchtaRequest, s: BuchtaResponse) => {
-                    // @ts-ignore always
-                    let path = decodeURI(r.url.match(/\d(?=\/).+/)[0].slice(1));
+        this.logger.info("Emitting Routes");
 
-                    // @ts-ignore it is a func
-                    s.send(route.content(r.originalRoute, path));
-                    s.setHeader("Content-Type", "text/html");
-                });
+        this.pages = this._builder.pageRouteGen();
+
+        return this;
+    }
+
+    dev() {
+        this.logger.info(`Started dev server on port ${this.port}`);
+        devServer(this.port, this.pages);
+    }
+
+    private getOrDef(route: string, def: any) {
+        let base: any = this.conf;
+        if (!base) return def;
+        for (const path of route.split(".")) {
+            if (typeof base[path] != "undefined") {
+                base = base[path];
             }
+            else return def;
         }
-    }
-
-    private checkPluginCompat(plug: any): boolean {
-        for (const dep of plug.dependsOn ?? []) {
-            if (!this.registeredPlugins.includes(dep)) return false;
-        }
-
-        for (const conflict of plug.conflictsWith ?? []) {
-            if (this.registeredPlugins.includes(conflict)) return false;
-        }
-        return true;
-    }
-
-    private checkExtensionOwnership(plug: string, ext: string): boolean {
-        for (const [key, val] of this.pluginOwns) {
-            if (plug == key) continue;
-            if (val?.fileExtensions?.includes(ext)) return false;
-        }
-
-        return true;
-    }
-
-    private loadServerRoutes(routes: string[]) {
-        for (const route of routes) {
-            const mod = require(normalize(this.rootDir + "/public/" + route));
-            if (!mod.default) continue;
-            const method = route.split(".").shift();
-            if (!method) continue;
-
-            if (["get", "post", "put", "delete"].includes(method ?? "")) {
-                const {default: f, before: b, after: a} = mod;
-
-                this[method](dirname(route), f);
-
-                if (b) this.router.addBefore(dirname(route), method, b, true);
-                if (a) this.router.addAfter(dirname(route), method, a, true);
-            }
-        }
-    }
-
-    run(port: number = this.port, func?: () => void) {
-        Bun.serve({
-            fetch: async (req: BuchtaRequest): Promise<Response> => {
-                // @ts-ignore it works always
-                let path = decodeURI(req.url.match(/\d(?=\/).+/)[0].slice(1));
-                let route: any;
-
-                if (!path.includes("?")) {
-                    route = this.router.handle(path, req.method.toLowerCase());
-                } else {
-                    const splited = path.split("?");
-
-                    route = this.router.handle(splited[0], req.method.toLowerCase());
-                    req.query = this.parseQuery(splited[1]);
-                }
-                if (!route) return new Response("404", {status: 404});
-
-                req.params = this.router.params;
-                req.originalRoute = route.path;
-
-                const buchtaRes = new BuchtaResponse();
-
-                let res: any;
-
-                res = route.b?.(req, buchtaRes);
-                if (res?.then) await res;
-
-                if (buchtaRes.canRedirect()) return buchtaRes.buildRedirect()
-
-                res = route.f(req, buchtaRes);
-                if (res?.then) await res;
-
-                if (buchtaRes.canRedirect()) return buchtaRes.buildRedirect()
-                
-                res = route.a?.(req, buchtaRes);
-                if (res?.then) await res;
-
-                if (buchtaRes.canRedirect()) return buchtaRes.buildRedirect()
-                               
-                return await buchtaRes.buildResponse();
-            },
-            port
-        });
-
-        func?.();
-    }
-    
-    parseQuery(path: string) {
-        const query = new Map<string, string>();
-        const splited = path.split("&");
-        splited.forEach(part => {
-            const spaced = part.split("=");
-            if (!query.has(spaced[0]))
-                query.set(spaced[0], spaced[1]);
-        })
-
-        return query;
+        if (typeof base == "undefined") return def;
+        return base;
     }
 }
-
-new Buchta().run(3000, () => console.log("running"));

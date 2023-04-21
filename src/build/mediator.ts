@@ -60,15 +60,14 @@ export class Mediator {
             traverseDir(process.cwd() + `/${d}`, process.cwd() + `/${d}`, [arr]);
 
             const files = arr.map(i => { return { route: "/" + i, path: process.cwd() + "/public/" + i }});
-            const filtered = files.filter(i => i.route.match(/.+\.server\.(js|ts)/) ? false : true);
 
-            this.files.push(...filtered);
+            this.files.push(...files);
         }
     }
     
     transpile() {
         if (!this.called) {
-            this.pathResolver = new PathResolver(this.resolvers, this.files.map(i => i.route));
+            this.pathResolver = new PathResolver(this.rootPath, this.resolvers, this.files.map(i => i.route));
             this.called = true;
         }
         for (const file of this.files) {
@@ -162,7 +161,7 @@ export class Mediator {
         writeFileSync(normalize(this.rootPath + "/.buchta/types/pages.d.ts"), this.tsgen.toString("/types/pages.d.ts"));
     }
 
-    pageGen() {
+    async pageGen() {
         const outPath = this.rootPath + "/.buchta/output/";
         const ssrPath = this.rootPath + "/.buchta/output-ssr/";
         const generatedPages: any[] = [];
@@ -180,14 +179,17 @@ export class Mediator {
                 if (!out) continue;
                 const deps = this.pathResolver?.resolvePageDeps(out, input.path);
 
-                this.ssrPages.set(dirname(input.path), (originalRoute: string, route: string) => {
-                    const cache = this.pageHandler.getSSRCache(route);
-                    if (cache) return cache;
+                if (this.ssrStep) {
+                    this.ssrPages.set(dirname(input.path), (originalRoute: string, route: string) => {
+                        const cache = this.pageHandler.getSSRCache(route);
+                        if (cache) return cache;
 
-                    const ssrOut = this.pageHandler.callSSRHandler(ext, originalRoute, route, out, ssrPath + input.path);
-                    this.pageHandler.setSSRCache(route, ssrOut);
-                    return ssrOut;
-                });
+                        const ssrOut = this.pageHandler.callSSRHandler(ext, originalRoute, route, out, ssrPath + input.path);
+                        if (!ssrOut) return "";
+                        this.pageHandler.setSSRCache(route, ssrOut);
+                        return ssrOut;
+                    });
+                }
 
                 generatedPages.push({
                     code: out,
@@ -198,10 +200,8 @@ export class Mediator {
         }
 
         for (const page of generatedPages) {
-            page.deps.forEach((dep: string) => {
+            page.deps.forEach(async (dep: string) => {
                 if (bundled.indexOf(dep) == -1) {
-                    const bundle = this.bundler.bundle(normalize(outPath + dep)) ?? "";
-                    writeFileSync(outPath + dep, bundle);
                     bundled.push(dep);
                 }
             });
@@ -210,6 +210,14 @@ export class Mediator {
             this.pages.push(dirname(page.route));
         }
         // INFO: if build system is in SSR mode, these pages will instead of loading files run specified functions and ignore every index.html file
+        
+        const normalizedBundle = bundled.map(e => normalize(outPath + e));
+
+        const newBundled = await this.bundler.bundle(normalizedBundle);
+ 
+        for (const i in bundled) {
+            writeFileSync(outPath + bundled[i], newBundled[i]);
+        }
     }
 
     configureSSR(srr: boolean) {
@@ -248,9 +256,10 @@ export class Mediator {
             }
         } else {
             for (const page of this.pages) {
-                arr.push({route: page, content: normalize(this.rootPath + "/.buchta/output/" + page + "/index.html")});
+                arr.push({route: page, path: normalize(this.rootPath + "/.buchta/output/" + page + "/index.html"), content: ""});
             }
         }
+
         return arr;
     }
 

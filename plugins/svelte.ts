@@ -1,20 +1,25 @@
 import { readFileSync, writeFileSync } from "fs";
-import { createRequire } from "module";
 import { basename } from "path";
 import { compile } from "svelte/compiler";
-import { Buchta } from "../src/buchta.js";
+import { Buchta, BuchtaPlugin } from "../src/buchta.js";
 
-const require = createRequire(import.meta.url);
+export function svelte(): BuchtaPlugin {
 
-export function svelte(name: string) {
+    const tsTranspiler = new Bun.Transpiler({loader: "ts"});
 
     function svelteTranspile(_: string, path: string) {
-        const content = readFileSync(path, {encoding: "utf8"});
+        let content = readFileSync(path, {encoding: "utf8"});
+
+        const scriptCode = content.match(/.(?<=<script.+lang="ts".*>.).+(?=<\/script>)/s);
+        if (scriptCode) { 
+            const code = tsTranspiler.transformSync(scriptCode[0], {});
+            content = content.replace(scriptCode[0], code);
+        }
 
         const { js } = compile(content, {
             // @ts-ignore types
             generate: globalThis.__BUCHTA_SSR ? "ssr" : "dom",
-            hydratable: true
+            hydratable: true,
         });
 
         return js.code;
@@ -47,7 +52,7 @@ export function svelte(name: string) {
     }
 
     return {
-        name: name,
+        name: "svelte",
         version: "0.1",
         dependsOn: [],
         conflictsWith: [],

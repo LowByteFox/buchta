@@ -1,19 +1,14 @@
-// "In this world, it's kill or be killed. And you're not gonna be the one who gets killed." - Omori
 import { BuchtaRequest } from './request.js';
 import { BuchtaResponse } from './response.js';
-import { BuchtaSubrouter } from './subrouter.js';
 
-export type route = (path: string, callback: (req: BuchtaRequest, res: BuchtaResponse) => void, ...data: any[]) => void;
-export type routeChain = (path: string, callback: (req: BuchtaRequest, res: BuchtaResponse) => void, ...data: any[]) => BuchtaSubrouter;
+export type route = (path: string, callback: (req: BuchtaRequest, res: BuchtaResponse) => void) => void;
 
 interface BuchtaRoute {
-    b: ((req: BuchtaRequest, res: BuchtaResponse) => void) | null,
     f: (req: BuchtaRequest, res: BuchtaResponse) => void,
-    a: ((req: BuchtaRequest, res: BuchtaResponse) => void) | null,
     path: string,
 }
 
-export class Router {
+export class BuchtaRouter {
     [x: string]: any;
 
     routes: Map<string, BuchtaRoute> = new Map();
@@ -41,7 +36,7 @@ export class Router {
                         this.preParams.set(regex, map);
                     }
                 })
-                this.routes.set(regex, {a: null, b: null, f: handler, path: path});
+                this.routes.set(regex, {f: handler, path: path});
             };
         }
     }
@@ -51,36 +46,6 @@ export class Router {
             path += "/";
         }
         return path;
-    }
-
-    addBefore(route: string, method: string, callback: (req: BuchtaRequest, res: BuchtaResponse) => void, force: boolean) {
-        let regex = `${method}/${this.healRoute(route)}`;
-
-        const data = this.routes.get(regex);
-        if (!data) return;
-
-        if (data.b && force) {
-            data.b = callback;
-        }
-
-        if (!data.b) {
-            data.b = callback;
-        }
-    }
-
-    addAfter(route: string, method: string, callback: (req: BuchtaRequest, res: BuchtaResponse) => void, force: boolean) {
-        let regex = `${method}/${this.healRoute(route)}`;
-
-        const data = this.routes.get(regex);
-        if (!data) return;
-
-        if (data.a && force) {
-            data.a = callback;
-        }
-
-        if (!data.a) {
-            data.a = callback;
-        }
     }
 
     handle(path: string, method: string): BuchtaRoute | null {

@@ -35,6 +35,14 @@
     "buchta": "bin/buchta.ts"
   },
   "dependencies": {
+    "@elysiajs/cors": "^0.3.0",
+    "@elysiajs/eden": "^0.4.1",
+    "@types/react": "^18.0.37",
+    "@types/react-dom": "^18.0.11",
+    "elysia": "^0.4.8",
+    "framer-motion": "^10.12.4",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
     "svelte": "^3.58.0"
   }
 }

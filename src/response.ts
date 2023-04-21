@@ -1,4 +1,3 @@
-// "It's okay to be sad sometimes. You don't always have to be happy." - Aubrey
 import { readFileSync } from "fs";
 
 export class BuchtaResponse {
@@ -7,8 +6,8 @@ export class BuchtaResponse {
     private statusText: string;
     private body: string | Uint8Array;
     private file: Blob | null;
-    private path;
-    private redirectTarget: string;
+    private path: string = "";
+    private redirectTarget: string = "";
 
     constructor() {
         this.statusCode = 200;
@@ -66,24 +65,7 @@ export class BuchtaResponse {
 
     buildResponseSync() {
         if (this.file)
-            // @ts-ignore it works just file
             return new Response(readFileSync(this.path), {
-                status: this.statusCode,
-                statusText: this.statusText,
-                headers: this.headers,
-            });
-            
-        return new Response(this.body, {
-            status: this.statusCode,
-            statusText: this.statusText,
-            headers: this.headers,
-        });
-    }
-
-    async buildResponse() {
-        if (this.file)
-            // @ts-ignore it works just file
-            return new Response(await this.file.arrayBuffer(), {
                 status: this.statusCode,
                 statusText: this.statusText,
                 headers: this.headers,

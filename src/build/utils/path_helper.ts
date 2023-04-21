@@ -40,9 +40,11 @@ export class PathResolver {
     private resolved: Map<string, string> = new Map();
     private pathFetch = /.(?!['"])(\.|\/).+?(?=['"])./g;
     private jsPathFetch = /.(?!['"])(\.|\/).+?(?=js['"]).../g;
+    private rootDir: string;
     
-    constructor(extensionResolver: Record<string, string>, files: string[]) {
+    constructor(rootDir: string, extensionResolver: Record<string, string>, files: string[]) {
         this.res = extensionResolver;
+        this.rootDir = rootDir;
         for (const file of files) {
             this.resolved.set(file, renameFile(file, nameGen(7), this.res));
         }
@@ -54,7 +56,8 @@ export class PathResolver {
 
     hasTSDeclaration(route: string) {
         const ext = route.split(".").pop();
-        if (this.res[ext] == "js") return true;
+
+        if (this.res[ext ?? ""] == "js") return true;
         return false;
     }
 
@@ -89,6 +92,11 @@ export class PathResolver {
                 }
                 const newContent: string = content.replaceAll(dep, newRelativePath);
                 if (newContent) content = newContent;
+            }
+
+            const bundleRelative = relative(dirname(file.path), this.rootDir + "/customBundle.ts");
+            if (this.hasTSDeclaration(file.route)) {
+                content = `import "${bundleRelative}"\n${content}`
             }
 
             return {

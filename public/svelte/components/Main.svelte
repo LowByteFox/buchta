@@ -1,4 +1,4 @@
-<script lang="ts">
+<script>
     let count = 0;
     const inc = () => {
         count++;

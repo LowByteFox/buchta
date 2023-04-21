@@ -1,9 +1,10 @@
-import { svelte } from "./plugins/svelte.js";
+import { svelte } from "./plugins/svelte";
+import { BuchtaConfig } from "./src/buchta";
 
 export default {
+    rootDir: import.meta.dir,
+
     port: 3000,
-
-    root: import.meta.dir,
-
-    plugins: [svelte("svelte")]
-}
+    ssr: true,
+    plugins: [svelte()],
+} as BuchtaConfig;
