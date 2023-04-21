@@ -23,7 +23,7 @@ bun install
 - [x] Better plugins
 - [x] Decrease size of plugins
 - [x] tsconfig.json generation
-- [ ] Custom Configurable Bundle Tools
+- [x] Custom Configurable Bundle Tools
 - [ ] Globals ( composables )
 - [ ] Static files
 - [ ] CSS bundling
@@ -33,5 +33,5 @@ bun install
 - [ ] React plugin
 - [ ] Vue.js plugin
 - [ ] node_modules custom components support
-- [ ] Elysia supercharger plugin
+- [x] Elysia supercharger plugin
 - [ ] Rewrite API
