@@ -20,6 +20,10 @@ interface BuilderAPI {
     addPageHandler: (extension: string, handler: handler) => void;
     addSsrPageHandler: (extension: string, handler: ssrPageBuildFunction) => void;
     addType: (extension: string, type: TSDeclaration | string, references?: {type: "types" | "path", value: string}[]) => void;
+    globalDeclarations: (string | TSDeclaration)[];
+    moduleDeclarations: {name: string; content: (TSDeclaration|string)[], globals?: (TSDeclaration|string)[] }[];
+    references: {type: "types" | "path", value: string}[];
+    imports: string[];
 }
 
 export interface BuchtaConfig {
@@ -68,6 +72,7 @@ export class Buchta {
         this.ssr = this.getOrDef("ssr", true);
         this.dirs = this.getOrDef("dirs", ["public"]);
         this.plugins = this.getOrDef("plugins", []);
+        this._builder = new Mediator(this.rootDir, this.ssr);
 
         this.builder = {
             addTranspiler: (target, result, handler) => {
@@ -79,13 +84,24 @@ export class Buchta {
             addSsrPageHandler: (extension, handler) => {
                 this._builder.setSSRPageHandler(extension, handler);
             },
-            addType: (extension, type, references) => {
+            addType: (extension, type, references: {type: "types" | "path", value: string}[] = []) => {
                 this._builder.setTypeGen(extension, type);
+                this._builder.setTypeImports(extension, references);
             },
+            moduleDeclarations: this._builder.moduleDeclarations,
+            globalDeclarations: this._builder.globalDeclarations,
+            references: this._builder.references,
+            imports: this._builder.imports
         }
 
-        this._builder = new Mediator(this.rootDir, this.ssr);
+        this._builder.globalDeclarations.push({
+            id: "let",
+            name: "__BUCHTA_EXISTS",
+            type: "boolean"
+        })
+
         this.bundle = new CustomBundle(this.rootDir);
+        globalThis.__BUCHTA_EXISTS = true
     }
 
     async setup() {

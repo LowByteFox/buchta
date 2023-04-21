@@ -45,6 +45,11 @@ export class Mediator {
     private typeGens: Map<string, TSDeclaration | string> = new Map();
     private typeImports: Map<string, {type: "types" | "path", value: string}[]> = new Map();
 
+    globalDeclarations: (string | TSDeclaration)[] = ["const __BUCHTA_SSR: boolean;\n"];
+    moduleDeclarations: {name: string; content: (TSDeclaration|string)[], globals?: (TSDeclaration|string)[] }[] = [];
+    references: {type: "types" | "path", value: string}[] = [];
+    imports: string[] = [];
+
     constructor(rootPath: string, ssr = false) {
         this.rootPath = rootPath;
         this.ssrStep = ssr;
@@ -133,7 +138,7 @@ export class Mediator {
                 const declaration = this.typeGens.get(ext);
                 tree.modules?.push({
                     name: out.originalPath,
-                    content: [declaration ?? "", {name: "myFunc", id: "function", func: {returnType: `"${out.originalPath}"`}}]
+                    content: [declaration ?? ""]
                 });
             }
         }
@@ -149,7 +154,10 @@ export class Mediator {
                 references: [{
                     type: "path",
                     value: "types/pages.d.ts"
-                }]
+                }, ...this.references],
+                globals: this.globalDeclarations,
+                modules: this.moduleDeclarations,
+                imports: this.imports
             }
         })
 

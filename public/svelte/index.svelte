@@ -1,11 +1,7 @@
 <script lang="ts">
-    import { onMount } from "svelte/internal";
     import Main from "./components/Main.svelte";
 
-    onMount(async () => {
-        // @ts-expect-error it is there but ts moment
-        console.log(await eden.index.get())
-    })
+    console.log(eden);
 </script>
 
 <div>

@@ -94,6 +94,7 @@ export class PathResolver {
                 if (newContent) content = newContent;
             }
 
+            console.log(file.route);
             const bundleRelative = relative(dirname(file.path), this.rootDir + "/customBundle.ts");
             if (this.hasTSDeclaration(file.route)) {
                 content = `import "${bundleRelative}"\n${content}`

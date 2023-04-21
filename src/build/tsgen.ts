@@ -52,17 +52,22 @@ export class TSGenerator {
             }
         }
 
+        code += "export {};";
+
         return code;
     }
 
     private globalHandler(tree: {globals: (TSDeclaration|string)[], globals2?: (TSDeclaration|string)[]}, name = "global") {
         let code = "";
-        if (name != "global") code += `declare "${name}" {\n`;
-        else code += "declare global {\n";
+        if (name != "global") {
+            code += `declare "${name}" {\n`;
+        } else {
+            code += "declare global {\n";
+        }
         for (const glob of tree.globals ?? []) {
             if (typeof glob == "string") code += glob;
             else {
-                code += "export ";
+                code += "";
                 if (glob.readonly) code += "readonly ";
                 if (glob.id != "emtpy") {
                 if (glob.id == "function") {
@@ -78,8 +83,9 @@ export class TSGenerator {
                     }
                 } else if (glob.id == "const" || glob.id == "var" || glob.id == "let") {
                     code += `${glob.id} ${glob.name}`;
-                    if (glob.type) code += ": " + glob.type + " ";
-                    code += ` = ${glob.value};`;
+                    if (glob.type) code += ": " + glob.type;
+                    if (glob.value) code += ` = ${glob.value};`;
+                    else code += ";";
                 } else if (glob.id == "type") {
                     code += `type ${glob.name} = ${glob.value}`;
                 } else if (glob.id == "interface") {
