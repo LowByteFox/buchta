@@ -1,1 +1,0 @@
-const index = () => <h1>Hello, World!</h1>

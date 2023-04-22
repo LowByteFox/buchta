@@ -1,7 +1,5 @@
 <script lang="ts">
     import Main from "./components/Main.svelte";
-
-    console.log(eden);
 </script>
 
 <div>
