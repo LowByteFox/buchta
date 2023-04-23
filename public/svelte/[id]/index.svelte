@@ -1,6 +1,4 @@
 <script>
-    const route = buchtaRoute();
-    console.log(route)
     import Main from "../components/Main.svelte";
 </script>
 

@@ -55,10 +55,11 @@ const app = new Elysia().
     post("/api/bun", () => "Bun").
     listen(3000);
 
-console.log(`🦊 Elysia is running at ${app.server.hostname}:${app.server.port}`)
-
+const now = performance.now();
 // INFO: must be used after!
 app.use(buchta);
+
+console.log(`It took ${performance.now() - now}ms to finish`);
 
 // WARN: DO NOT CHANGE THIS!
 export type App = typeof app;

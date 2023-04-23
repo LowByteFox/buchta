@@ -94,14 +94,7 @@ export class Buchta {
             imports: this._builder.imports
         }
 
-        this._builder.globalDeclarations.push({
-            id: "let",
-            name: "__BUCHTA_EXISTS",
-            type: "boolean"
-        })
-
         this.bundle = new CustomBundle(this.rootDir);
-        globalThis.__BUCHTA_EXISTS = true
     }
 
     async setup() {
@@ -162,3 +155,9 @@ export class Buchta {
         return base;
     }
 }
+
+const app = new Buchta()
+
+await app.setup();
+
+app.dev();
