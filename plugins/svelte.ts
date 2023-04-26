@@ -2,6 +2,7 @@ import { readFileSync, writeFileSync } from "fs";
 import { basename } from "path";
 import { compile } from "svelte/compiler";
 import { Buchta, BuchtaPlugin } from "../src/buchta.js";
+import { PluginBuilder } from "bun";
 
 export function svelte(): BuchtaPlugin {
 
@@ -62,6 +63,45 @@ export function svelte(): BuchtaPlugin {
             if (this.ssr) {
                 this.builder.addSsrPageHandler("svelte", svelteSSRPage);
             }
+
+            this.pluginManager.setBundlerPlugin({
+                name: "svelte",
+                async setup(build: PluginBuilder) {
+                    build.onLoad({ filter: /\.svelte$/ }, ({ path }) => {
+                        const content = readFileSync(path, {encoding: "utf-8"})
+
+                        const out = compile(content, {
+                            generate: "dom",
+                            hydratable: true
+                        })
+
+                        return {
+                            contents: out.js.code,
+                            loader: "js"
+                        }
+                    })
+                },
+            })
+
+            const b = this;
+
+            this.pluginManager.setServerPlugin({
+                name: "Svelte",
+                async setup(build: PluginBuilder) {
+                    build.onLoad({ filter: /\.svelte$/ }, ({ path }) => {
+                        const content = readFileSync(path, {encoding: "utf-8"})
+                        const out = compile(content, {
+                            generate: b.ssr ? "ssr" : "dom",
+                            hydratable: true
+                        })
+
+                        return {
+                            contents: out.js.code,
+                            loader: "js"
+                        }
+                    })
+                }
+            })
         }
     }
 }

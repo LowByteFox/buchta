@@ -1,11 +1,12 @@
-// In the "Black Space" area, there's a hidden room where you can find a jukebox that plays different songs.
+import { ServerPlugin } from "../PluginManager";
+
 export class Bundler {
-    async bundle(entrypoints: string[]) {
+    async bundle(entrypoints: string[], plugins: ServerPlugin[]) {
         // @ts-ignore now
         const out = await Bun.build({
             target: "browser",
             entrypoints,
-            
+            plugins,
         })
 
         const outs = [];

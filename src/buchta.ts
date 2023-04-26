@@ -6,6 +6,7 @@ import { TSDeclaration } from "./build/tsgen";
 import { BuchtaLogger } from "./utils/logger";
 import devServer from "./dev";
 import { CustomBundle } from "./bundleToolGen";
+import { PluginManager } from "./PluginManager";
 
 export interface BuchtaPlugin {
     name: string;
@@ -42,6 +43,7 @@ export class Buchta {
     pages: any[] = [];
     bundle: CustomBundle;
     private bundleHandlers: Function[] = [];
+    pluginManager: PluginManager = new PluginManager();
 
     builder: BuilderAPI;
     rootDir: string;
@@ -119,6 +121,8 @@ export class Buchta {
             driver?.call(this);
         }
 
+        this.pluginManager.injectPlugins();
+
         this.logger.info("Done loading plugins");
 
         this.logger.info("Executing the build system");
@@ -126,7 +130,7 @@ export class Buchta {
         this._builder.transpile();
         this._builder.toFS();
         this.logger.info("Generating Pages");
-        await this._builder.pageGen();
+        await this._builder.pageGen(this.pluginManager.getBundlerPlugins());
         this.logger.info("Generating Types");
         this._builder.typeGen();
 

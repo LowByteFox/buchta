@@ -5,6 +5,6 @@ export default {
     rootDir: import.meta.dir,
 
     port: 3000,
-    ssr: true,
+    ssr: false,
     plugins: [svelte()],
 } as BuchtaConfig;

@@ -6,6 +6,7 @@ import { PageHandler, handler, ssrPageBuildFunction } from "./page_handler.js";
 import { Bundler } from "./bundler.js";
 import { TSDeclaration, TSGenerator, TSTree } from "./tsgen.js";
 import { Cache } from "./utils/Cache.js";
+import { BundlerPlugin, PluginManager } from "../PluginManager.js";
 
 function traverseDir(dirPath: string, baseDir: string, result: [string[]] = [[]]) {
     const files = readdirSync(dirPath);
@@ -202,7 +203,7 @@ export class Mediator {
         writeFileSync(normalize(this.rootPath + "/.buchta/types/pages.d.ts"), this.tsgen.toString("/types/pages.d.ts"));
     }
 
-    async pageGen() {
+    async pageGen(plugins: BundlerPlugin[]) {
         const outPath = this.rootPath + "/.buchta/output/";
         const ssrPath = this.rootPath + "/.buchta/output-ssr/";
         const generatedPages: any[] = [];
@@ -244,7 +245,7 @@ export class Mediator {
             page.deps.forEach(async (dep: string) => {
                 if (bundled.indexOf(dep) == -1) {
                     const path = normalize(outPath + dep);
-                    const bundlerOutput = await this.bundler.bundle([path]);
+                    const bundlerOutput = await this.bundler.bundle([path], plugins);
                     writeFileSync(outPath + dep, bundlerOutput[0]);
                 }
             });
