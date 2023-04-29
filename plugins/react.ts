@@ -15,11 +15,7 @@ export function react(conf: ReactConfig): BuchtaPlugin {
 
         const transpiler = new Bun.Transpiler({
             loader: "tsx",
-            tsconfig: JSON.stringify({
-                "compilerOptions": {
-                    "jsx": "react-jsx",
-                }
-            })
+            autoImportJSX: true
         })
 
         let code = `${transpiler.transformSync(content, {})}`
@@ -40,7 +36,7 @@ export function react(conf: ReactConfig): BuchtaPlugin {
         const content = readFileSync(path, {encoding: "utf-8"});
         const split = content.split("\n");
         split.pop();
-        split.push("hydrateRoot(document.body, index());");
+        split.push("const domNode = document.getElementById('root');\nhydrateRoot(domNode, index());");
         split.unshift("import { hydrateRoot } from 'react-dom/client';");
         writeFileSync(path, split.join("\n"));
 
@@ -51,7 +47,7 @@ export function react(conf: ReactConfig): BuchtaPlugin {
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 </head>
 <body>
-<!-- HTML -->
+<div id="root"><!-- HTML --></div>
 </body>
 <script type="module" src="./${basename(route)}"></script>
 </html>`
@@ -69,10 +65,10 @@ export function react(conf: ReactConfig): BuchtaPlugin {
         dependsOn: [],
         conflictsWith: [],
         driver(this: Buchta) {
-            // this.builder.addTranspiler("jsx", "js", reactTranspile);
+            this.builder.addTranspiler("jsx", "js", reactTranspile);
             this.builder.addPageHandler("jsx", reactPage);
             if (conf.tsx) {
-                // this.builder.addTranspiler("tsx", "js", reactTranspile);
+                this.builder.addTranspiler("tsx", "js", reactTranspile);
                 this.builder.addPageHandler("tsx", reactPage);
             }
 

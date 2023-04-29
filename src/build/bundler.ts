@@ -21,7 +21,7 @@ export class Bundler {
             return outs;
         else
             console.log(logs);
-        return [null];
+        return outs;
     }
 }
 
