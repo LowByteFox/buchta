@@ -38,8 +38,8 @@ const renameFile = (path: string, toAdd: string, res: Record<string, string>) =>
 export class PathResolver {
     private res: Record<string, string>;
     private resolved: Map<string, string> = new Map();
-    private pathFetch = /.(?!['"])(\.|\/).+?(?=['"])./g;
-    private jsPathFetch = /.(?!['"])(\.|\/).+?(?=js['"]).../g;
+    private pathFetch = /.(?<=['"])(\.\/|\/|\.\.\/).+?(?=['"])./g;
+    private jsPathFetch = /.(?<=['"])(\.\/|\/|\.\.\/).+?(?=js['"]).../g;
     private rootDir: string;
     
     constructor(rootDir: string, extensionResolver: Record<string, string>, files: string[], reUse: Map<string, string>) {
@@ -70,7 +70,6 @@ export class PathResolver {
 
     getOriginalPath(mangled: string) {
         let res = "";
-
         for (const [key, val] of this.resolved) {
             if (val == mangled) {
                 res = key;

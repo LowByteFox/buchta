@@ -8,7 +8,7 @@
   "main": "src/buchta.ts",
   "module": "src/buchta.ts",
   "devDependencies": {
-    "bun-types": "^0.1.11"
+    "bun-types": "^0.5.8"
   },
   "bin": {
     "buchta": "bin/buchta.ts"
@@ -16,36 +16,31 @@
   "contributors": [
     "Ján Gajdoš <gajdos.jan77@gmail.com>"
   ],
-  "description": "Full-Stack Framework Powered By Bun",
+  "description": "Bun-First integrable build step for frontend ",
   "keywords": [
     "buchta",
     "bun",
-    "framework",
     "web",
     "http",
-    "rest",
-    "router",
-    "app",
-    "api",
-    "ssr",
-    "plugins"
+    "spa",
+    "svelte",
+    "build-tools",
+    "ssr"
   ],
   "license": "ISC",
   "scripts": {
-    "buchta": "bin/buchta.ts"
+    "buchta": "bun src/buchta.ts"
   },
   "dependencies": {
     "@elysiajs/cors": "^0.3.0",
     "@elysiajs/eden": "^0.4.1",
     "@smui/button": "^7.0.0-beta.3",
-    "@types/react": "^18.0.37",
-    "@types/react-dom": "^18.0.11",
-    "carbon-components-svelte": "^0.73.5",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.1",
     "elysia": "^0.4.8",
-    "esbuild": "^0.17.18",
-    "framer-motion": "^10.12.4",
+    "marked": "^4.3.0",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0",
+    "react-dom": "latest",
     "svelte": "^3.58.0",
     "svelte-awesome-color-picker": "^2.4.1",
     "svelte-material-ui": "^7.0.0-beta.3"

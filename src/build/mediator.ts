@@ -1,12 +1,11 @@
-import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "fs";
+import { existsSync, mkdirSync, readdirSync, statSync, writeFileSync } from "fs";
 import { basename, dirname, join, normalize, relative } from "path";
 import { PathResolver } from "./utils/path_helper.js";
 import { Transpiler } from "./transpiler.js";
 import { PageHandler, handler, ssrPageBuildFunction } from "./page_handler.js";
 import { Bundler } from "./bundler.js";
 import { TSDeclaration, TSGenerator, TSTree } from "./tsgen.js";
-import { Cache } from "./utils/Cache.js";
-import { BundlerPlugin, PluginManager } from "../PluginManager.js";
+import { ServerPlugin } from "../PluginManager.js";
 
 function traverseDir(dirPath: string, baseDir: string, result: [string[]] = [[]]) {
     const files = readdirSync(dirPath);
@@ -45,10 +44,7 @@ export class Mediator {
     private pages: Array<string> = [];
     private typeGens: Map<string, TSDeclaration | string> = new Map();
     private typeImports: Map<string, {type: "types" | "path", value: string}[]> = new Map();
-    private cache?: Cache;
     private reUse: Map<string, string> = new Map();
-    private cacheAdd: Map<string, any> = new Map();
-    private cachedRoutes: Map<string, any> = new Map();
 
     globalDeclarations: (string | TSDeclaration)[] = ["const __BUCHTA_SSR: boolean;\n"];
     moduleDeclarations: {name: string; content: (TSDeclaration|string)[], globals?: (TSDeclaration|string)[] }[] = [];
@@ -64,34 +60,12 @@ export class Mediator {
 
     prepare(dirs: string[] = ["public"]) {
         this.mkdir(".buchta/output/");
-        this.cache = new Cache(this.rootPath);
         if (this.ssrStep) this.mkdir(".buchta/output-ssr/");
         for (const d of dirs) {
             const arr: string[] = [];
             traverseDir(normalize(this.rootPath + `/${d}`), normalize(this.rootPath + `/${d}`), [arr]);
 
             const files = arr.map(i => ({ route: "/" + i, path: normalize(this.rootPath + `/${d}/` + i) }));
-            for (const i in files) {
-                const content = readFileSync(files[i].path);
-                const cache: any[] = this.cache.getCache(files[i].route);
-                if (this.cache.checkCache(files[i].route, content)) {
-                    this.cachedRoutes.set(files[i].route, cache[0]);
-                    files.splice(new Number(i).valueOf(), 1);
-                } else {
-                    if (this.cache.checkForUpdate(files[i].route, content)) {
-                        this.cache.update.run({
-                            $route: files[i].route,
-                            $hash: this.cache.getChecksum(content)
-                        })
-                        this.reUse.set(files[i].route, cache[0].path);
-                    } else {
-                        this.cacheAdd.set(files[i].route, {
-                            $route: files[i].route,
-                            $hash: this.cache.getChecksum(content),
-                        })
-                    }
-                }
-            }
 
             this.files.push(...files);
         }
@@ -99,17 +73,10 @@ export class Mediator {
     
     transpile() {
         if (!this.called) {
-            this.pathResolver = new PathResolver(this.rootPath, this.resolvers, this.files.map(i => i.route), this.reUse);
+            this.pathResolver = new PathResolver(this.rootPath, this.resolvers, [...this.files.map(i => i.route), ...Array.from(this.reUse.keys())], this.reUse);
             this.called = true;
         }
         for (const file of this.files) {
-            // @ts-ignore types
-            if (this.cacheAdd.has(file.route) && !globalThis.__BUCHTA_SSR) {
-                this.cache?.add.run({
-                    ...this.cacheAdd.get(file.route),
-                    $path: this.pathResolver?.getPath(file.route)
-                })
-            }
             const code = this.transpiler.compile(file);
             const resolved = this.pathResolver?.resolveDeps(file, code);
             // @ts-ignore types
@@ -197,13 +164,12 @@ export class Mediator {
 
         writeFileSync(normalize(this.rootPath + "/.buchta/buchta.d.ts"), this.tsgen.toString("/buchta.d.ts"));
         writeFileSync(normalize(this.rootPath + "/.buchta/tsconfig.json"), this.tsgen.tsconfigGen());
-
         this.mkdir(".buchta/types/");
 
         writeFileSync(normalize(this.rootPath + "/.buchta/types/pages.d.ts"), this.tsgen.toString("/types/pages.d.ts"));
     }
 
-    async pageGen(plugins: BundlerPlugin[]) {
+    async pageGen(plugins: ServerPlugin[]) {
         const outPath = this.rootPath + "/.buchta/output/";
         const ssrPath = this.rootPath + "/.buchta/output-ssr/";
         const generatedPages: any[] = [];
@@ -242,43 +208,17 @@ export class Mediator {
         }
 
         for (const page of generatedPages) {
-            page.deps.forEach(async (dep: string) => {
+            for (const dep of page.deps) {
                 if (bundled.indexOf(dep) == -1) {
                     const path = normalize(outPath + dep);
                     const bundlerOutput = await this.bundler.bundle([path], plugins);
-                    writeFileSync(outPath + dep, bundlerOutput[0]);
+                    if (bundlerOutput[0])
+                        writeFileSync(outPath + dep, bundlerOutput[0]);
                 }
-            });
+            }
 
             writeFileSync(dirname(outPath + page.route) + "/index.html", page.code);
             this.pages.push(dirname(page.route));
-        }
-
-        for (const [_, cached] of this.cachedRoutes) {
-            const orig = this.pathResolver?.getOriginalPath(cached.path);
-            if (!orig) continue;
-            const split = basename(orig).split(".");
-            const ext = split.pop();
-            if (!ext) {
-                this.transpiled.push({path: this.pathResolver?.getPath(cached.route), originalPath: cached.route})
-                continue;
-            }
-
-            if (this.ssrStep) {
-                const out = readFileSync(dirname(outPath + cached.route) + "/index.html", {encoding: "utf-8"});
-
-                this.ssrPages.set(dirname(cached.path), (_: string, route: string) => {
-                    const cache = this.pageHandler.getSSRCache(route);
-                    if (cache) return cache;
-
-                    const ssrOut = this.pageHandler.callSSRHandler(ext, dirname(cached.path), route, out, ssrPath + cached.path);
-                    if (!ssrOut) return "";
-                    this.pageHandler.setSSRCache(route, ssrOut);
-                    return ssrOut;
-                });
-            } else {
-                this.pages.push(dirname(cached.route));
-            }
         }
     }
 
@@ -294,7 +234,6 @@ export class Mediator {
         this.pageHandler.assignSSRHandler(extension, handler);
     }
 
-    // TODO: change this: any to this: Buchta
     declareTranspilation(target: string, result: string, handler: (this: any, route: string, path: string) => string) {
         this.resolvers[target] = result;
         this.transpiler.setTranspiler(target, handler);

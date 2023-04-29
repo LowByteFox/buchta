@@ -27,7 +27,7 @@ export class Cache {
         if (!row || row.length == 0)
             return false;
 
-        if (row[0].checksum != this.getChecksum(content))
+        if (row[0].hash != this.getChecksum(content))
             return true;
         return false;
     }
@@ -37,7 +37,7 @@ export class Cache {
         if (!row || row.length == 0)
             return false;
 
-        if (row[0].checksum == this.getChecksum(content))
+        if (row[0].hash == this.getChecksum(content))
             return true;
         return false;
     }

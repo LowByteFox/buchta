@@ -5,8 +5,11 @@ import { tsTranspile } from "./build/transpilers/typescript";
 import { TSDeclaration } from "./build/tsgen";
 import { BuchtaLogger } from "./utils/logger";
 import devServer from "./dev";
+import pageBuilder from "./build";
 import { CustomBundle } from "./bundleToolGen";
-import { PluginManager } from "./PluginManager";
+import { PluginManager, ServerPlugin } from "./PluginManager";
+import { PluginBuilder } from "bun";
+import { EventEmitter } from "node:events";
 
 export interface BuchtaPlugin {
     name: string;
@@ -35,14 +38,16 @@ export interface BuchtaConfig {
     plugins?: BuchtaPlugin[];
 }
 
-export class Buchta {
+export class Buchta extends EventEmitter {
     private _builder: Mediator;
     private conf?: BuchtaConfig;
+    preparationFinished = false;
     logger;
     private plugins: BuchtaPlugin[];
     pages: any[] = [];
     bundle: CustomBundle;
     private bundleHandlers: Function[] = [];
+    fileCache: Map<string, string> = new Map();
     pluginManager: PluginManager = new PluginManager();
 
     builder: BuilderAPI;
@@ -56,6 +61,7 @@ export class Buchta {
     }
 
     constructor(quiet = false, config?: BuchtaConfig) {
+        super();
         this.logger = BuchtaLogger(quiet);
         if (!config) {
             try {
@@ -121,6 +127,47 @@ export class Buchta {
             driver?.call(this);
         }
 
+        const buchta = this;
+
+        const filesPlugin: ServerPlugin = {
+            name: "others",
+            async setup(build: PluginBuilder) {
+                // @ts-ignore sush
+                build.onLoad({ filter: /\..+/}, ({ path }) => {
+                    let ext = path.match(/\.+?(?=(js|mjs|cjs|ts|jsx|tsx|txt|json|toml)).+/g);
+                    if (!ext) {
+                        const data = {
+                            path,
+                            route: ""                        
+                        }
+
+                        if (!buchta.fileCache.has(path) && buchta.preparationFinished) {
+                            buchta.emit("fileLoad", data);
+                            buchta.fileCache.set(path, data.route);
+                        } else {
+                            data.route = buchta.fileCache.get(path) ?? "";
+                        }
+                        
+                        return {
+                            contents: `export default "${data.path}"`,
+                            loader: "js"
+                        }
+                    }
+                    // @ts-ignore types
+                    ext = ext[0].slice(1);
+                    // @ts-ignore types
+                    if (ext == "mjs" || ext == "cjs") ext = "js";
+                    return {
+                        contents: readFileSync(path, {encoding: "utf-8"}),
+                        loader: ext
+                    }
+                })
+            }
+        }
+
+        this.pluginManager.setServerPlugin(filesPlugin);
+        this.pluginManager.setBundlerPlugin(filesPlugin);
+
         this.pluginManager.injectPlugins();
 
         this.logger.info("Done loading plugins");
@@ -138,12 +185,19 @@ export class Buchta {
 
         this.pages = this._builder.pageRouteGen();
 
-        return this;
+        this.preparationFinished = true;
+
+        return Promise.resolve(this);
     }
 
     dev() {
         this.logger.info(`Started dev server on port ${this.port}`);
-        devServer(this.port, this.pages);
+        devServer(this, this.port, this.pages);
+    }
+
+    export() {
+        this.logger.info(`Building webpage`);
+        pageBuilder(this.pages);
     }
 
     private getOrDef(route: string, def: any) {
