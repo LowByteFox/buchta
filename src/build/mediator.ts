@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readdirSync, statSync, writeFileSync } from "fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "fs";
 import { basename, dirname, join, normalize, relative } from "path";
 import { PathResolver } from "./utils/path_helper.js";
 import { Transpiler } from "./transpiler.js";
@@ -6,6 +6,7 @@ import { PageHandler, handler, ssrPageBuildFunction } from "./page_handler.js";
 import { Bundler } from "./bundler.js";
 import { TSDeclaration, TSGenerator, TSTree } from "./tsgen.js";
 import { ServerPlugin } from "../PluginManager.js";
+import { Cache } from "./cache/index.js";
 
 function traverseDir(dirPath: string, baseDir: string, result: [string[]] = [[]]) {
     const files = readdirSync(dirPath);
@@ -45,6 +46,9 @@ export class Mediator {
     private typeGens: Map<string, TSDeclaration | string> = new Map();
     private typeImports: Map<string, {type: "types" | "path", value: string}[]> = new Map();
     private reUse: Map<string, string> = new Map();
+    private cache: Cache | undefined;
+    private lateInit = true;
+    private indexes: string[] = [];
 
     globalDeclarations: (string | TSDeclaration)[] = ["const __BUCHTA_SSR: boolean;\n"];
     moduleDeclarations: {name: string; content: (TSDeclaration|string)[], globals?: (TSDeclaration|string)[] }[] = [];
@@ -69,9 +73,30 @@ export class Mediator {
 
             this.files.push(...files);
         }
+        if (existsSync(normalize(this.rootPath + "/.buchta/cache.json"))) {
+            this.lateInit = false
+        } 
     }
-    
+
     transpile() {
+        // @ts-ignore
+        if (!this.lateInit && !globalThis.__BUCHTA_SSR) {
+            const newFiles = this.files.map(f => ({...f, content: readFileSync(f.path)}));
+            this.cache = new Cache(newFiles);
+            const out = this.cache.getChanges(normalize(this.rootPath + "/.buchta/cache.json"), this.indexes);
+            for (const re of out.reuse) {
+                this.reUse.set(re.route, re.reUse);
+                for (const i in this.files) {
+                    if (this.files[i].route == re.route) {
+                        this.files.splice(parseInt(i), 1);
+                    }
+                }
+            }
+
+            for (const re of out.changed) {
+                this.reUse.set(re.route, re.reUse);
+            }
+        }
         if (!this.called) {
             this.pathResolver = new PathResolver(this.rootPath, this.resolvers, [...this.files.map(i => i.route), ...Array.from(this.reUse.keys())], this.reUse);
             this.called = true;
@@ -176,35 +201,7 @@ export class Mediator {
         const bundled: string[] = [];
 
         for (const input of this.transpiled) {
-            const orig = this.pathResolver?.getOriginalPath(input.path);
-            if (!orig) continue;
-            const split = basename(orig).split(".");
-            const ext = split?.pop();
-            if (!ext) continue;
-            if (split.join(".") == "index") { 
-                if (ext == "js" || ext == "ts") continue;
-                const out: string | null = this.pageHandler.callHandler(ext, input.path, outPath + input.path);
-                if (!out) continue;
-                const deps = this.pathResolver?.resolvePageDeps(out, input.path);
-
-                if (this.ssrStep) {
-                    this.ssrPages.set(dirname(input.path), (_: string, route: string) => {
-                        const cache = this.pageHandler.getSSRCache(route);
-                        if (cache) return cache;
-
-                        const ssrOut = this.pageHandler.callSSRHandler(ext, dirname(input.path), route, out, ssrPath + input.path);
-                        if (!ssrOut) return "";
-                        this.pageHandler.setSSRCache(route, ssrOut);
-                        return ssrOut;
-                    });
-                }
-
-                generatedPages.push({
-                    code: out,
-                    deps,
-                    route: input.path,
-                });
-            }
+            this.pageSet(input, outPath, ssrPath, generatedPages, false);
         }
 
         for (const page of generatedPages) {
@@ -220,6 +217,68 @@ export class Mediator {
             writeFileSync(dirname(outPath + page.route) + "/index.html", page.code);
             this.pages.push(dirname(page.route));
         }
+
+        if (this.lateInit) {
+            // init the graph here
+            const newFiles = this.files.map(f => ({...f, content: readFileSync(f.path), reUse: this.pathResolver?.getPath(f.route)}));
+            this.cache = new Cache(newFiles);
+            this.cache.saveCache(normalize(this.rootPath + "/.buchta/cache.json"), this.indexes);
+        } else {
+            const cacheGeneratedPages: any[] = [];
+            for (const [route, newRoute] of this.reUse) {
+                const out = this.pageSet({path: newRoute, originalPath: route}, outPath, ssrPath, cacheGeneratedPages, true);
+                if (!out) {
+                    this.transpiled.push({path: newRoute, originalPath: route, content: "cache"});
+                }
+            }
+
+            if (!this.ssrStep) {
+                for (const page of cacheGeneratedPages) {
+                    this.pages.push(dirname(page.route));
+                }
+            } else {
+                for (const page of cacheGeneratedPages) {
+                    this.transpiled.push({path: page.route, originalPath: page.originalRoute, content: "cache" })
+                }
+            }
+
+            this.cache?.saveCache(normalize(this.rootPath + "/.buchta/cache.json"), this.indexes);
+        }
+    }
+
+    private pageSet(input: {originalPath: string, path: string}, outPath: string, ssrPath: string, generatedPages: any[], cache: boolean): boolean {
+        const split = basename(input.originalPath).split(".");
+        const ext = split?.pop();
+        if (!ext) return false;
+        if (split.join(".") == "index") { 
+            if (ext == "js" || ext == "ts") return false;
+            const out: string | null = this.pageHandler.callHandler(ext, input.path, outPath + input.path, cache);
+            if (!out) return false;
+            const deps = this.pathResolver?.resolvePageDeps(out, input.path);
+
+            if (this.ssrStep) {
+                this.ssrPages.set(dirname(input.path), (_: string, route: string) => {
+                    const cache = this.pageHandler.getSSRCache(route);
+                    if (cache) return cache;
+
+                    const ssrOut = this.pageHandler.callSSRHandler(ext, dirname(input.path), route, out, ssrPath + input.path);
+                    if (!ssrOut) return "";
+                    this.pageHandler.setSSRCache(route, ssrOut);
+                    return ssrOut;
+                });
+            }
+
+            if (generatedPages) {
+                generatedPages.push({
+                    code: out,
+                    deps,
+                    route: input.path,
+                    originalRoute: input.originalPath
+                });
+            }
+            return true;
+        }
+        return false;
     }
 
     configureSSR(srr: boolean) {
@@ -227,6 +286,7 @@ export class Mediator {
     }
 
     setPageHandler(extension: string, handler: handler) {
+        this.indexes.push(`index.${extension}`)
         this.pageHandler.assignHandler(extension, handler);
     }
 

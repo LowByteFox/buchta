@@ -32,13 +32,15 @@ export function react(conf: ReactConfig): BuchtaPlugin {
     }
 
     // SPA preparation
-    function reactPage(route: string, path: string) {
-        const content = readFileSync(path, {encoding: "utf-8"});
-        const split = content.split("\n");
-        split.pop();
-        split.push("const domNode = document.getElementById('root');\nhydrateRoot(domNode, index());");
-        split.unshift("import { hydrateRoot } from 'react-dom/client';");
-        writeFileSync(path, split.join("\n"));
+    function reactPage(route: string, path: string, ...args: any[]) {
+        if (args && !args[0]) {
+            const content = readFileSync(path, {encoding: "utf-8"});
+            const split = content.split("\n");
+            split.pop();
+            split.push("const domNode = document.getElementById('root');\nhydrateRoot(domNode, index());");
+            split.unshift("import { hydrateRoot } from 'react-dom/client';");
+            writeFileSync(path, split.join("\n"));
+        }
 
         return  `<!DOCTYPE html>
 <html lang="en">

@@ -23,6 +23,8 @@
         <Label>Open Dialog</Label>
     </Button>
 
+    <Label>I am just a text</Label>
+
 <Dialog
   bind:open
   aria-labelledby="simple-title"

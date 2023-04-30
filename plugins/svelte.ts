@@ -26,12 +26,14 @@ export function svelte(): BuchtaPlugin {
         return js.code;
     }
 
-    function sveltePage(route: string, path: string) {
-        const content = readFileSync(path, {encoding: "utf8"});
-        const split = content.split("\n");
-        split.pop();
-        split.push("new Component({ target: document.body, hydrate: true });");
-        writeFileSync(path, split.join("\n"));
+    function sveltePage(route: string, path: string, ...args: any[]) {
+        if (args && !args[0]) {
+            const content = readFileSync(path, {encoding: "utf8"});
+            const split = content.split("\n");
+            split.pop();
+            split.push("new Component({ target: document.body, hydrate: true });");
+            writeFileSync(path, split.join("\n"));
+        }
 
         return `<!DOCTYPE html>
 <html lang="en">

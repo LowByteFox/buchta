@@ -1,5 +1,4 @@
-// When you first enter Basil's house, you can interact with his plants to make them sway back and forth. If you continue to interact with them, they will eventually fall over.
-export type handler = (route: string, path: string, ssrContent?: any) => string;
+export type handler = (route: string, path: string, ...args: any[]) => string;
 export type ssrPageBuildFunction = (originalRoute: string, route: string, csrHtml: string, modFile: string) => string;
 
 export class PageHandler {
@@ -7,14 +6,14 @@ export class PageHandler {
     private ssrCache: Map<string, string> = new Map();
     private ssrHandler: Map<string, ssrPageBuildFunction> = new Map();
 
-    callHandler(extension: string, route: string, path: string): string | null {
+    callHandler(extension: string, route: string, path: string, ...args: any[]): string | null {
         const func = this.handlers.get(extension);
         if (!func) {
             //throw new Error(`Page handler for extension "${extension}" doesn't exist!`);
             return null;
         }
 
-        return func(route, path);
+        return func(route, path, ...args);
     }
 
     assignHandler(extension: string, handler: handler) {
