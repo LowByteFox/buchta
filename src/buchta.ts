@@ -10,17 +10,17 @@ import { CustomBundle } from "./bundleToolGen";
 import { PluginManager, ServerPlugin } from "./PluginManager";
 import { PluginBuilder } from "bun";
 import { EventEmitter } from "node:events";
+import { transpiler } from "./build/transpiler";
 
 export interface BuchtaPlugin {
     name: string;
-    version: string;
     dependsOn: string[];
     conflictsWith: string[];
     driver?: (this: Buchta) => void;
 }
 
 interface BuilderAPI {
-    addTranspiler: (target: string, result: string, handler: (this: any, route: string, path: string) => string) => void;
+    addTranspiler: (target: string, result: string, handler: transpiler) => void;
     addPageHandler: (extension: string, handler: handler) => void;
     addSsrPageHandler: (extension: string, handler: ssrPageBuildFunction) => void;
     addType: (extension: string, type: TSDeclaration | string, references?: {type: "types" | "path", value: string}[]) => void;
@@ -48,7 +48,7 @@ export class Buchta extends EventEmitter {
     bundle: CustomBundle;
     private bundleHandlers: Function[] = [];
     fileCache: Map<string, string> = new Map();
-    pluginManager: PluginManager = new PluginManager();
+    pluginManager: PluginManager = new PluginManager(this);
 
     builder: BuilderAPI;
     rootDir: string;
@@ -84,17 +84,37 @@ export class Buchta extends EventEmitter {
 
         this.builder = {
             addTranspiler: (target, result, handler) => {
+                if (this.pluginManager.checkAvailableRegister(target)) {
+                    this.logger.error(`Unable to register "${target}" transpiler, plugin "${this.pluginManager.getRegisterOwner(target)}" has it`);
+                    return;
+                }
                 this._builder.declareTranspilation(target, result, handler);
+                this.pluginManager.pluginRegisterAction(target);
             },
             addPageHandler: (extension, handler) => {
+                if (this.pluginManager.checkAvailableRegister(extension + "page")) {
+                    this.logger.error(`Unable to register "${extension}" page handler, plugin "${this.pluginManager.getRegisterOwner(extension + "page")}" has it`);
+                    return;
+                }
                 this._builder.setPageHandler(extension, handler);
+                this.pluginManager.pluginRegisterAction(extension + "page");
             },
             addSsrPageHandler: (extension, handler) => {
+                if (this.pluginManager.checkAvailableRegister(extension + "ssr")) {
+                    this.logger.error(`Unable to register "${extension}" ssr handler, plugin "${this.pluginManager.getRegisterOwner(extension + "ssr")}" has it`);
+                    return;
+                }
                 this._builder.setSSRPageHandler(extension, handler);
+                this.pluginManager.pluginRegisterAction(extension + "ssr");
             },
             addType: (extension, type, references: {type: "types" | "path", value: string}[] = []) => {
+                if (this.pluginManager.checkAvailableRegister(extension + "types")) {
+                    this.logger.error(`Unable to register types for "${extension}", plugin "${this.pluginManager.getRegisterOwner(extension + "type")}" have them`);
+                    return;
+                }
                 this._builder.setTypeGen(extension, type);
                 this._builder.setTypeImports(extension, references);
+                this.pluginManager.pluginRegisterAction(extension + "types");
             },
             moduleDeclarations: this._builder.moduleDeclarations,
             globalDeclarations: this._builder.globalDeclarations,
@@ -124,7 +144,10 @@ export class Buchta extends EventEmitter {
         for (const plug of this.plugins) {
             const { driver } = plug;
             delete plug.driver;
-            driver?.call(this);
+            if (this.pluginManager.addPlugin(plug)) {
+                driver?.call(this);
+                this.logger.success(`Plugin "${plug.name}" was loaded!`);
+            }
         }
 
         const buchta = this;
@@ -143,7 +166,7 @@ export class Buchta extends EventEmitter {
 
                         if (!buchta.fileCache.has(path) && buchta.preparationFinished) {
                             buchta.emit("fileLoad", data);
-                            buchta.fileCache.set(path, data.route);
+                            buchta.fileCache.set(path, data.path);
                         } else {
                             data.route = buchta.fileCache.get(path) ?? "";
                         }
@@ -174,7 +197,7 @@ export class Buchta extends EventEmitter {
 
         this.logger.info("Executing the build system");
         this.logger.info("Transpiling");
-        this._builder.transpile();
+        await this._builder.transpile();
         this._builder.toFS();
         this.logger.info("Generating Pages");
         await this._builder.pageGen(this.pluginManager.getBundlerPlugins());

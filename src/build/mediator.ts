@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "fs";
 import { basename, dirname, join, normalize, relative } from "path";
 import { PathResolver } from "./utils/path_helper.js";
-import { Transpiler } from "./transpiler.js";
+import { Transpiler, transpiler } from "./transpiler.js";
 import { PageHandler, handler, ssrPageBuildFunction } from "./page_handler.js";
 import { Bundler } from "./bundler.js";
 import { TSDeclaration, TSGenerator, TSTree } from "./tsgen.js";
@@ -48,9 +48,10 @@ export class Mediator {
     private reUse: Map<string, string> = new Map();
     private cache: Cache | undefined;
     private lateInit = true;
+    private transpileSSR;
     private indexes: string[] = [];
 
-    globalDeclarations: (string | TSDeclaration)[] = ["const __BUCHTA_SSR: boolean;\n"];
+    globalDeclarations: (string | TSDeclaration)[] = [];
     moduleDeclarations: {name: string; content: (TSDeclaration|string)[], globals?: (TSDeclaration|string)[] }[] = [];
     references: {type: "types" | "path", value: string}[] = [];
     imports: string[] = [];
@@ -58,8 +59,7 @@ export class Mediator {
     constructor(rootPath: string, ssr = false) {
         this.rootPath = rootPath;
         this.ssrStep = ssr;
-        // @ts-ignore i don't want to setup types yet 
-        globalThis.__BUCHTA_SSR = false;
+        this.transpileSSR = false;
     }
 
     prepare(dirs: string[] = ["public"]) {
@@ -78,9 +78,8 @@ export class Mediator {
         } 
     }
 
-    transpile() {
-        // @ts-ignore
-        if (!this.lateInit && !globalThis.__BUCHTA_SSR) {
+    async transpile() {
+        if (!this.lateInit && !this.transpileSSR) {
             const newFiles = this.files.map(f => ({...f, content: readFileSync(f.path)}));
             this.cache = new Cache(newFiles);
             const out = this.cache.getChanges(normalize(this.rootPath + "/.buchta/cache.json"), this.indexes);
@@ -102,24 +101,19 @@ export class Mediator {
             this.called = true;
         }
         for (const file of this.files) {
-            const code = this.transpiler.compile(file);
+            const code = await this.transpiler.compile(file, this.ssrStep, this.transpileSSR);
             const resolved = this.pathResolver?.resolveDeps(file, code);
-            // @ts-ignore types
-            if (!globalThis.__BUCHTA_SSR) {
+            if (!this.transpileSSR) {
                 this.transpiled.push(resolved);
             } else {
                 this.SSRd.set(resolved?.path ?? "", resolved);
             }
         }
-        // @ts-ignore types later
-        if (this.ssrStep && !globalThis.__BUCHTA_SSR) {
-            // @ts-ignore types later
-            globalThis.__BUCHTA_SSR = true;
-            this.transpile();
-            // @ts-ignore types
-        } else if (globalThis.__BUCHTA_SSR) {
-            // @ts-ignore
-            globalThis.__BUCHTA_SSR = false;
+        if (this.ssrStep && !this.transpileSSR) {
+            this.transpileSSR = true;
+            await this.transpile();
+        } else if (this.transpileSSR) {
+            this.transpileSSR = false;
         }
     }
 
@@ -247,12 +241,12 @@ export class Mediator {
     }
 
     private pageSet(input: {originalPath: string, path: string}, outPath: string, ssrPath: string, generatedPages: any[], cache: boolean): boolean {
-        const split = basename(input.originalPath).split(".");
+        const split = basename(normalize(input.originalPath)).split(".");
         const ext = split?.pop();
         if (!ext) return false;
         if (split.join(".") == "index") { 
             if (ext == "js" || ext == "ts") return false;
-            const out: string | null = this.pageHandler.callHandler(ext, input.path, outPath + input.path, cache);
+            const out: string | null = this.pageHandler.callHandler(ext, input.path, normalize(outPath + input.path), cache);
             if (!out) return false;
             const deps = this.pathResolver?.resolvePageDeps(out, input.path);
 
@@ -261,7 +255,7 @@ export class Mediator {
                     const cache = this.pageHandler.getSSRCache(route);
                     if (cache) return cache;
 
-                    const ssrOut = this.pageHandler.callSSRHandler(ext, dirname(input.path), route, out, ssrPath + input.path);
+                    const ssrOut = this.pageHandler.callSSRHandler(ext, dirname(input.path), route, out, normalize(ssrPath + input.path));
                     if (!ssrOut) return "";
                     this.pageHandler.setSSRCache(route, ssrOut);
                     return ssrOut;
@@ -294,7 +288,7 @@ export class Mediator {
         this.pageHandler.assignSSRHandler(extension, handler);
     }
 
-    declareTranspilation(target: string, result: string, handler: (this: any, route: string, path: string) => string) {
+    declareTranspilation(target: string, result: string, handler: transpiler) {
         this.resolvers[target] = result;
         this.transpiler.setTranspiler(target, handler);
     }

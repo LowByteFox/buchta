@@ -1,6 +1,6 @@
-import { readFileSync, writeFileSync } from "fs";
+import { readFileSync } from "fs";
 import { basename } from "path";
-import { compile } from "svelte/compiler";
+import { compile, preprocess} from "svelte/compiler";
 import { Buchta, BuchtaPlugin } from "../src/buchta.js";
 import { PluginBuilder } from "bun";
 
@@ -8,32 +8,40 @@ export function svelte(): BuchtaPlugin {
 
     const tsTranspiler = new Bun.Transpiler({loader: "ts"});
 
-    function svelteTranspile(_: string, path: string) {
+    async function svelteTranspile(route: string, path: string, isSSREnabled: boolean, currentlySSR: boolean) {
         let content = readFileSync(path, {encoding: "utf8"});
 
-        const scriptCode = content.match(/.(?<=<script.+lang="ts".*>.).+(?=<\/script>)/s);
-        if (scriptCode) { 
-            const code = tsTranspiler.transformSync(scriptCode[0], {});
-            content = content.replace(scriptCode[0], code);
-        }
+        const { code: preprocessed } = await preprocess(content, {
+            script: ({ content, attributes }) => {
+                if (attributes.lang != "ts") return { code: content };
+                return {
+                    code: tsTranspiler.transformSync(content, {})
+                }
+            }
+        })
+
+        content = preprocessed;
 
         const { js } = compile(content, {
             // @ts-ignore types
-            generate: globalThis.__BUCHTA_SSR ? "ssr" : "dom",
+            generate: currentlySSR ? "ssr" : "dom",
             hydratable: true,
         });
 
-        return js.code;
+        let code = js.code;
+
+        if (route.endsWith("index.svelte")) {
+            if (currentlySSR) return code;
+            if (isSSREnabled)
+                code += "\nnew Component({ target: document.body, hydrate: true });"
+            else
+                code += "\nnew Component({ target: document.body });"
+        }
+
+        return code;
     }
 
-    function sveltePage(route: string, path: string, ...args: any[]) {
-        if (args && !args[0]) {
-            const content = readFileSync(path, {encoding: "utf8"});
-            const split = content.split("\n");
-            split.pop();
-            split.push("new Component({ target: document.body, hydrate: true });");
-            writeFileSync(path, split.join("\n"));
-        }
+    function sveltePage(route: string) {
 
         return `<!DOCTYPE html>
 <html lang="en">
@@ -56,7 +64,6 @@ export function svelte(): BuchtaPlugin {
 
     return {
         name: "svelte",
-        version: "0.1",
         dependsOn: [],
         conflictsWith: [],
         driver(this: Buchta) {

@@ -2,24 +2,26 @@
 import { readFileSync } from "fs";
 import { transpilationFile } from "./mediator.js";
 
-export class Transpiler {
-    private transpilers: Map<string, (route: string, path: string) => string> = new Map();
+export type transpiler = (route: string, path: string, isSsrEnabled: boolean, transpilingSSR: boolean) => Promise<string>
 
-    private defaultTranspiler(_: string, path: string) {
+export class Transpiler {
+    private transpilers: Map<string, transpiler> = new Map();
+
+    private async defaultTranspiler(_: string, path: string) {
         return readFileSync(path);
     }
 
     constructor() {
-        this.setTranspiler("js", (_: string, path: string) => {
+        this.setTranspiler("js", async (_: string, path: string) => {
             return readFileSync(path, {encoding: "utf8"});
         });
     }
 
-    private getTranspiler(extension: string): ((route: string, path: string) => string) | undefined {
+    private getTranspiler(extension: string): transpiler | undefined {
         return this.transpilers.get(extension);
     }
 
-    setTranspiler(extension: string, handler: (route: string, path: string) => string) {
+    setTranspiler(extension: string, handler: transpiler) {
         this.transpilers.set(extension, handler);
     }
 
@@ -27,12 +29,12 @@ export class Transpiler {
         return file.split(".").pop();
     }
 
-    compile(file: transpilationFile): string | Buffer {
+    compile(file: transpilationFile, ssrEn: boolean, currentlySSR: boolean): Promise<string | Buffer> {
         const ext = this.getExtension(file.path) ?? "";
 
         if (this.hasTranspiler(ext)) {
             const func = this.getTranspiler(ext);
-            return func?.(file.route, file.path) ?? "";
+            return func?.(file.route, file.path, ssrEn, currentlySSR) ?? Promise.resolve("");
         }
 
         return this.defaultTranspiler(file.route, file.path);

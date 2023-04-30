@@ -1,4 +1,3 @@
-import { readFileSync } from "node:fs";
 import { BuchtaRequest } from "./request";
 import { BuchtaResponse } from "./response";
 import { BuchtaRouter } from "./router.js";

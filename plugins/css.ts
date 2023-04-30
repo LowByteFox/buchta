@@ -1,11 +1,10 @@
 import { PluginBuilder } from "bun";
 import { readFileSync } from "fs";
-import { Buchta, BuchtaPlugin } from "~/src/buchta";
+import { Buchta, BuchtaPlugin } from "../src/buchta";
 
 export function css(): BuchtaPlugin {
     return {
         name: "css",
-        version: "0.1",
         dependsOn: [],
         conflictsWith: [],
         driver(this: Buchta) {

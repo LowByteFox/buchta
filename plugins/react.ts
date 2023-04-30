@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from "fs";
+import { readFileSync } from "fs";
 import { Buchta, BuchtaPlugin } from "../src/buchta";
 import { basename } from "path";
 import { renderToString } from "react-dom/server";
@@ -9,8 +9,7 @@ interface ReactConfig {
 
 export function react(conf: ReactConfig): BuchtaPlugin {
 
-    // jsx/tsx to js
-    function reactTranspile(_: string, path: string) {
+    async function reactTranspile(route: string, path: string, isSSRenabled: boolean, currentlySSR: boolean) {
         const content = readFileSync(path, {encoding: "utf-8"});
 
         const transpiler = new Bun.Transpiler({
@@ -20,11 +19,17 @@ export function react(conf: ReactConfig): BuchtaPlugin {
 
         let code = `${transpiler.transformSync(content, {})}`
 
-        // @ts-ignore SRR
-        if (__BUCHTA_SSR) {
-            code = `import { renderToString } from 'react-dom/server';\n${code}`;
-            if (path.match(/(index\.jsx|index\.tsx)$/)) {
+        if (route.match(/(index\.jsx|index\.tsx)$/)) {
+            if (currentlySSR) {
                 code += "\nexport default index";
+                return code;
+            }
+            if (isSSRenabled) {
+                code = `import { hydrateRoot } from 'react-dom/client';\n${code}`
+                code += "\nhydrateRoot(document.getElementById('__buchta'), index());\nexport default index";
+            } else {
+                code = `import { createRoot } from 'react-dom/client';\n${code}`
+                code += "\nconst root = createRoot(document.getElementById('__buchta'));\nroot.render(index());"
             }
         }
 
@@ -32,15 +37,7 @@ export function react(conf: ReactConfig): BuchtaPlugin {
     }
 
     // SPA preparation
-    function reactPage(route: string, path: string, ...args: any[]) {
-        if (args && !args[0]) {
-            const content = readFileSync(path, {encoding: "utf-8"});
-            const split = content.split("\n");
-            split.pop();
-            split.push("const domNode = document.getElementById('root');\nhydrateRoot(domNode, index());");
-            split.unshift("import { hydrateRoot } from 'react-dom/client';");
-            writeFileSync(path, split.join("\n"));
-        }
+    function reactPage(route: string) {
 
         return  `<!DOCTYPE html>
 <html lang="en">
@@ -49,7 +46,7 @@ export function react(conf: ReactConfig): BuchtaPlugin {
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 </head>
 <body>
-<div id="root"><!-- HTML --></div>
+<div id="__buchta"><!-- HTML --></div>
 </body>
 <script type="module" src="./${basename(route)}"></script>
 </html>`
@@ -63,7 +60,6 @@ export function react(conf: ReactConfig): BuchtaPlugin {
 
     return {
         name: "react",
-        version: "0.1",
         dependsOn: [],
         conflictsWith: [],
         driver(this: Buchta) {
