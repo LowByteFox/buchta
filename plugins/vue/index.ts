@@ -3,6 +3,7 @@ import { Buchta, BuchtaPlugin } from "../../src/buchta";
 import { compileVue } from "./compiler";
 import { createSSRApp } from "vue";
 import { renderToString } from "vue/server-renderer";
+import { PluginBuilder } from "bun";
 
 export default function vue(): BuchtaPlugin {
 
@@ -38,11 +39,37 @@ export default function vue(): BuchtaPlugin {
         dependsOn: [],
         conflictsWith: [],
         driver(this: Buchta) {
-           this.builder.addTranspiler("vue", "js", vueTranspile);
-           this.builder.addPageHandler("vue", vuePage);
-           if (this.ssr) {
-               this.builder.addSsrPageHandler("vue", vueSSRPage);
-           }
+            this.builder.addTranspiler("vue", "js", vueTranspile);
+            this.builder.addPageHandler("vue", vuePage);
+            if (this.ssr) {
+                this.builder.addSsrPageHandler("vue", vueSSRPage);
+            }
+
+            const b = this;
+
+            this.pluginManager.setBundlerPlugin({
+                name: "vue",
+                async setup(build: PluginBuilder) {
+                    build.onLoad({ filter: /\.vue$/ }, ({ path }) => {
+                        return {
+                            contents: compileVue(path, b.ssr, false) ?? "",
+                            loader: "js"
+                        }
+                    })
+                }
+            });
+
+            this.pluginManager.setServerPlugin({
+                name: "vue",
+                async setup(build: PluginBuilder) {
+                    build.onLoad({ filter: /\.vue$/ }, ({ path }) => {
+                        return {
+                            contents: compileVue(path, b.ssr, b.ssr) ?? "",
+                            loader: "js"
+                        }
+                    })
+                }
+            })
         },
     }
 }
