@@ -2,6 +2,7 @@ import { css } from "./plugins/css";
 // disabled just in case
 import { react } from "./plugins/react";
 import { svelte } from "./plugins/svelte";
+import vue from "./plugins/vue";
 import { BuchtaConfig } from "./src/buchta";
 
 export default {
@@ -9,5 +10,5 @@ export default {
 
     port: 3000,
     ssr: true,
-    plugins: [svelte(), css()],
+    plugins: [svelte(), css(), vue()],
 } as BuchtaConfig;

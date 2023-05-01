@@ -15,7 +15,7 @@ export default function(routes: any[]) {
     for (const route of routes) {
         if (typeof route.content == "string") {
             makeDir(normalize(root + route.route));
-            Bun.write(normalize(root + route.route), Bun.file(route.path));
+            copyFileSync(route.path, normalize(root + route.route));
         } else {
             makeDir(normalize(root + route.route));
             writeFileSync(normalize(root + route.route + "/index.html"), route.content(route.route, route.route));

@@ -38,11 +38,13 @@
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.1",
     "elysia": "^0.4.8",
+    "framer-motion": "^10.12.4",
     "marked": "^4.3.0",
     "react": "^18.2.0",
     "react-dom": "latest",
     "svelte": "^3.58.0",
     "svelte-awesome-color-picker": "^2.4.1",
-    "svelte-material-ui": "^7.0.0-beta.3"
+    "svelte-material-ui": "^7.0.0-beta.3",
+    "vue": "^3.2.47"
   }
 }

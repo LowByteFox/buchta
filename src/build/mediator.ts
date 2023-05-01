@@ -38,7 +38,7 @@ export class Mediator {
     private called = false;
     private transpiled: any[] = [];
     private SSRd: Map<string, any> = new Map();
-    private ssrPages: Map<string, (originalRoute: string, route: string) => string> = new Map();
+    private ssrPages: Map<string, (originalRoute: string, route: string) => Promise<string>> = new Map();
     private pageHandler = new PageHandler();
     private bundler: Bundler = new Bundler();
     private tsgen: TSGenerator = new TSGenerator();
@@ -251,11 +251,11 @@ export class Mediator {
             const deps = this.pathResolver?.resolvePageDeps(out, input.path);
 
             if (this.ssrStep) {
-                this.ssrPages.set(dirname(input.path), (_: string, route: string) => {
-                    const cache = this.pageHandler.getSSRCache(route);
+                this.ssrPages.set(dirname(input.path), async (_: string, route: string) => {
+                    const cache = this.pageHandler.getSSRCache(route) ?? "";
                     if (cache) return cache;
 
-                    const ssrOut = this.pageHandler.callSSRHandler(ext, dirname(input.path), route, out, normalize(ssrPath + input.path));
+                    const ssrOut = await this.pageHandler.callSSRHandler(ext, dirname(input.path), route, out, normalize(ssrPath + input.path));
                     if (!ssrOut) return "";
                     this.pageHandler.setSSRCache(route, ssrOut);
                     return ssrOut;

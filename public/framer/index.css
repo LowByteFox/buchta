@@ -1,0 +1,233 @@
+body {
+  --black: #000000;
+  --ash-black: #222;
+  --white: #fafafa;
+  --sky: #00ccff;
+  --green: #22dddd;
+  --blue: #1300ff;
+  --dusk: #6600ff;
+  --purple: #9900ff;
+  --pink: #ff0066;
+  --red: #fe0222;
+  --orange: #fd7702;
+  --yellow: #ffbb00;
+
+  --background: var(--white);
+  --accent: var(--red);
+
+  margin: 0;
+  padding: 0;
+  background-color: var(--background);
+  color: var(--accent);
+  padding-bottom: 100px;
+  overflow: hidden;
+}
+
+#root {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+* {
+  font-family: sofia-pro, sans-serif;
+  font-weight: 400;
+  font-style: normal;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  font-family: sofia-pro, sans-serif;
+  font-weight: 600;
+  font-style: normal;
+}
+
+h1 {
+  font-size: 36px;
+  font-weight: 700;
+  letter-spacing: -1px;
+  line-height: 1.2;
+  text-align: center;
+  margin: 100px 0 40px;
+}
+
+h2 {
+  font-weight: 400;
+  margin: 50px 0 10px;
+}
+
+p {
+  margin: 0 0 30px 0;
+  font-size: 18px;
+}
+
+footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  padding: 20px;
+  border-top: 1px dotted var(--accent);
+  background-image: radial-gradient(
+    rgba(0, 0, 0, 0) 1px,
+    var(--background) 1px
+  );
+  background-size: 4px 4px;
+  backdrop-filter: blur(3px);
+  -moz-backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  font-size: 14px;
+  line-height: 14px;
+}
+
+footer svg {
+  margin-right: 20px;
+}
+
+footer a {
+  text-decoration: none;
+  color: var(--accent);
+}
+
+code,
+input {
+  font-family: input-mono, monospace;
+  font-weight: 400;
+  font-style: normal;
+}
+
+#progress {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  transform: rotate(-90deg);
+}
+
+circle {
+  stroke-dashoffset: 0;
+  stroke-width: 15%;
+  fill: none;
+}
+
+.bg {
+  stroke: var(--accent);
+  opacity: 0.3;
+}
+
+#progress .indicator {
+  stroke: var(--accent);
+}
+
+ul {
+  display: flex;
+  list-style: none;
+  height: 300px;
+  overflow-x: scroll;
+  padding: 20px 0;
+  flex: 0 0 600px;
+  margin: 0 auto;
+}
+
+::-webkit-scrollbar {
+  height: 5px;
+  width: 5px;
+  background: #fff3;
+  -webkit-border-radius: 1ex;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--accent);
+  -webkit-border-radius: 1ex;
+}
+
+::-webkit-scrollbar-corner {
+  background: #fff3;
+}
+
+li {
+  flex: 0 0 200px;
+  background: var(--accent);
+  margin: 0 20px 0 0;
+}
+
+li:last-of-type {
+  margin: 0;
+}
+
+.refresh {
+  padding: 5px;
+  position: absolute;
+  border: 1px dotted var(--accent);
+  border-radius: 5px;
+  width: 20px;
+  height: 20px;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+}
+
+.refresh path {
+  fill: var(--accent);
+}
+
+.box {
+  width: 200px;
+  height: 200px;
+  border-radius: 20px;
+  border: 3px dotted var(--accent);
+  pointer-events: none;
+}
+
+.example {
+  display: flex;
+  align-items: center;
+}
+
+input {
+  accent-color: var(--accent);
+}
+
+.inputs {
+  display: flex;
+  flex-direction: column;
+  padding-left: 50px;
+}
+
+label {
+  display: flex;
+  align-items: center;
+  margin: 10px 0;
+}
+
+label code {
+  width: 100px;
+}
+
+input[type="number"] {
+  border: 0;
+  border-bottom: 1px dotted var(--accent);
+  color: var(--accent);
+  margin-left: 10px;
+}
+
+input[type="number"]:focus {
+  outline: none;
+  border-bottom: 2px solid var(--accent);
+}
+
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+}

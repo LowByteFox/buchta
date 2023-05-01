@@ -4,7 +4,7 @@ import { handler, ssrPageBuildFunction } from "./build/page_handler";
 import { tsTranspile } from "./build/transpilers/typescript";
 import { TSDeclaration } from "./build/tsgen";
 import { BuchtaLogger } from "./utils/logger";
-import devServer from "./dev";
+import devServer, { earlyHook } from "./dev";
 import pageBuilder from "./build";
 import { CustomBundle } from "./bundleToolGen";
 import { PluginManager, ServerPlugin } from "./PluginManager";
@@ -60,7 +60,7 @@ export class Buchta extends EventEmitter {
         this.bundleHandlers.push(handler);
     }
 
-    constructor(quiet = false, config?: BuchtaConfig) {
+    constructor(defaults = true, quiet = false, config?: BuchtaConfig) {
         super();
         this.logger = BuchtaLogger(quiet);
         if (!config) {
@@ -123,6 +123,9 @@ export class Buchta extends EventEmitter {
         }
 
         this.bundle = new CustomBundle(this.rootDir);
+        if (defaults) {
+            earlyHook(this);
+        }
     }
 
     async setup() {
@@ -157,27 +160,27 @@ export class Buchta extends EventEmitter {
             async setup(build: PluginBuilder) {
                 // @ts-ignore sush
                 build.onLoad({ filter: /\..+/}, ({ path }) => {
-                    let ext = path.match(/\.+?(?=(js|mjs|cjs|ts|jsx|tsx|txt|json|toml)).+/g);
+                    let ext = path.match(/\.(js|mjs|cjs|ts|jsx|tsx|txt|json|toml)$/g);
                     if (!ext) {
                         const data = {
                             path,
                             route: ""                        
                         }
 
-                        if (!buchta.fileCache.has(path) && buchta.preparationFinished) {
+                        if (!buchta.fileCache.has(path) && !buchta.preparationFinished) {
                             buchta.emit("fileLoad", data);
                             buchta.fileCache.set(path, data.path);
                         } else {
                             data.route = buchta.fileCache.get(path) ?? "";
                         }
-                        
+ 
                         return {
-                            contents: `export default "${data.path}"`,
+                            contents: `export default "${data.route}"`,
                             loader: "js"
                         }
                     }
                     // @ts-ignore types
-                    ext = ext[0].slice(1);
+                    ext = ext[0].split(".").pop();
                     // @ts-ignore types
                     if (ext == "mjs" || ext == "cjs") ext = "js";
                     return {
@@ -215,7 +218,7 @@ export class Buchta extends EventEmitter {
 
     dev() {
         this.logger.info(`Started dev server on port ${this.port}`);
-        devServer(this, this.port, this.pages);
+        devServer(this.port, this.pages);
     }
 
     export() {

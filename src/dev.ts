@@ -4,6 +4,8 @@ import { BuchtaRouter } from "./router.js";
 import { Buchta } from "./buchta";
 import { basename } from "node:path";
 
+const extraRoutes: Map<string, any> = new Map();
+
 const nameGen = (length: number) => {
     let result = '';
     const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -16,7 +18,6 @@ const nameGen = (length: number) => {
     return result;
 }
 
-
 const renameFile = (path: string, toAdd: string) => {
     const split = path.split(".");
     const ext = split.pop();
@@ -24,8 +25,23 @@ const renameFile = (path: string, toAdd: string) => {
     return `${split.join(".")}-${toAdd}.${ext}`
 }
 
-export default function(build: Buchta, port: number, routes: any[]) {
+export const earlyHook = (build: Buchta) => {
+    build.on("fileLoad", (data) => {
+        data.route = "/" + renameFile(basename(data.path), nameGen(7));
+        const func = async (_: BuchtaRequest, s: BuchtaResponse) => {
+            s.sendFile(data.path ?? "");
+        }
+
+        extraRoutes.set(data.route, func);
+    })
+}
+
+export default function(port: number, routes: any[]) {
     const router = new BuchtaRouter();
+
+    for (const [route, func] of extraRoutes) {
+        router.get(route, func);
+    }
 
     for (const route of routes) {
         if (typeof route.content == "string" || route.content instanceof Buffer) {
@@ -40,30 +56,16 @@ export default function(build: Buchta, port: number, routes: any[]) {
             });
         } else {
             // @ts-ignore types
-            router.get(route.route, (r: BuchtaRequest, s: BuchtaResponse) => {
+            router.get(route.route, async (r: BuchtaRequest, s: BuchtaResponse) => {
                 // @ts-ignore always
                 let path = decodeURI(r.url.match(/\d(?=\/).+/)[0].slice(1));
 
                 // @ts-ignore it is a func
-                s.send(route.content(r.originalRoute, path));
+                s.send(await route.content(r.originalRoute, path));
                 s.setHeader("Content-Type", "text/html");
             });
         }
     }
-
-    build.on("fileLoad", (data) => {
-        data.route = "/" + renameFile(basename(data.path), nameGen(7));
-        const func = async (_: BuchtaRequest, s: BuchtaResponse) => {
-            s.sendFile(data.path ?? "");
-        }
-
-        router.get(data.path, func);
-
-        if (data.path.includes(".buchta/output-ssr")) {
-            const temp = data.path.replace(".buchta/output-ssr/", ".buchta/output/");
-            router.get(temp, func);
-        }
-    })
 
     function parseQuery(path: string) {
         const query = new Map<string, string>();

@@ -1,5 +1,5 @@
 export type handler = (route: string, path: string, ...args: any[]) => string;
-export type ssrPageBuildFunction = (originalRoute: string, route: string, csrHtml: string, modFile: string) => string;
+export type ssrPageBuildFunction = (originalRoute: string, route: string, csrHtml: string, modFile: string) => Promise<string>;
 
 export class PageHandler {
     private handlers: Map<string, handler> = new Map();
@@ -32,11 +32,11 @@ export class PageHandler {
         this.ssrHandler.set(extension, handler);
     }
 
-    callSSRHandler(extension: string, originalRoute: string, route: string, csrHtml: string, modFile: string): string | null {
+    callSSRHandler(extension: string, originalRoute: string, route: string, csrHtml: string, modFile: string): Promise<string | null> {
         const func = this.ssrHandler.get(extension);
         if (!func) {
             // (`SSR Page handler for route "${originalRoute}" doesn't exist!`);
-            return null;
+            return Promise.resolve(null);
         }
 
         return func(originalRoute, route, csrHtml, modFile);

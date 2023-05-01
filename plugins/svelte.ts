@@ -56,7 +56,7 @@ export function svelte(): BuchtaPlugin {
 </html>`
     }
 
-    function svelteSSRPage(_originalRoute: string, _route: string, csrHTML: string, modFile: string) {
+    async function svelteSSRPage(_originalRoute: string, _route: string, csrHTML: string, modFile: string) {
         const mod = require(modFile).default;
 
         return csrHTML.replace("<!-- HTML -->", mod.render().html);

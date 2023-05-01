@@ -52,7 +52,7 @@ export function react(conf: ReactConfig): BuchtaPlugin {
 </html>`
     }
 
-    function reactSSRPage(_originalRoute: string, _route: string, csrHTML: string, modFile: string) {
+    async function reactSSRPage(_originalRoute: string, _route: string, csrHTML: string, modFile: string) {
         const mod = require(modFile).default;
 
         return csrHTML.replace("<!-- HTML -->", renderToString(mod()));
