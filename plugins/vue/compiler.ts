@@ -19,8 +19,15 @@ const tsToJs = (code: string) => {
     return transpiler.transformSync(code, {});
 }
 
-export const compileVue = (path: string, ssrEnabled: boolean, currentlySSR: boolean) => {
-    const content = readFileSync(path, {encoding: "utf-8"})
+export const compileVue = (
+    path: string,
+    ssrEnabled: boolean,
+    currentlySSR: boolean,
+    imports: string[],
+    clientPlugins: Map<string, string>,
+    clientComponents: Map<string, string>) => {
+
+    const content = readFileSync(path, {encoding: "utf-8"});
     const parsed = parse(content, {
         filename: basename(path),
     });
@@ -41,6 +48,18 @@ export const compileVue = (path: string, ssrEnabled: boolean, currentlySSR: bool
         code = code.replace("export default ", "let sfc = ");
         code += ";\n";
 
+        const codeImports = imports.join("\n");
+        let plugins = "";
+        let components = "";
+
+        for (const [name, config] of clientPlugins) {
+            plugins += `a.use(${name}, ${config});\n`;
+        }
+
+        for (const [name, comp] of clientComponents) {
+            components += `a.component("${name}", ${comp});`;
+        }
+
         if (path.endsWith("index.vue")) {
             if (currentlySSR) {
                 code += "export default sfc;"
@@ -48,13 +67,15 @@ export const compileVue = (path: string, ssrEnabled: boolean, currentlySSR: bool
             }
 
             if (!ssrEnabled) {
-                code = `import { createApp } from "vue";\n${code}\nconst a = createApp(sfc);\na.mount("#__buchta");`
+                code = `import { createApp } from "vue";\n${codeImports}${code}\nconst a = createApp(sfc);\n${components}${plugins}a.mount("#__buchta");`
                 return tsToJs(code);
             } else {
-                code = `import { createSSRApp } from "vue";\n${code}\nconst a = createSSRApp(sfc);\na.mount("#__buchta");`;
+                code = `import { createSSRApp } from "vue";\n${codeImports}${code}\nconst a = createSSRApp(sfc);\n${components}${plugins}a.mount("#__buchta");`;
                 return tsToJs(code);
             }
         }
     }
     // vue 2
+    throw "I am sorry but vue 2 is going to be deprecated by the end of 2023!";
+    
 }
