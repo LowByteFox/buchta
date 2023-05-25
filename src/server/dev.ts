@@ -1,8 +1,8 @@
 import { BuchtaRequest } from "./request";
 import { BuchtaResponse } from "./response";
 import { BuchtaRouter } from "./router.js";
-import { Buchta } from "./buchta";
-import { basename } from "node:path";
+import { Buchta } from "../buchta.ts";
+import { basename, dirname } from "node:path";
 
 const extraRoutes: Map<string, any> = new Map();
 
@@ -27,7 +27,7 @@ const renameFile = (path: string, toAdd: string) => {
 
 export const earlyHook = (build: Buchta) => {
     build.on("fileLoad", (data) => {
-        data.route = "/" + renameFile(basename(data.path), nameGen(7));
+        data.route = "/" + basename(data.path);
         const func = async (_: BuchtaRequest, s: BuchtaResponse) => {
             s.sendFile(data.path ?? "");
         }
@@ -36,7 +36,7 @@ export const earlyHook = (build: Buchta) => {
     })
 }
 
-export default function(port: number, routes: any[]) {
+export default function(this: Buchta, port: number, routes: any[]) {
     const router = new BuchtaRouter();
 
     for (const [route, func] of extraRoutes) {
@@ -44,26 +44,29 @@ export default function(port: number, routes: any[]) {
     }
 
     for (const route of routes) {
-        if (typeof route.content == "string" || route.content instanceof Buffer) {
-            // @ts-ignore types
-            router.get(route.route, async (_: BuchtaRequest, s: BuchtaResponse) => {
-                s.sendFile(route.path ?? "");
-            });
+        if (route.func) {
+            router.get(dirname(route.route), async(req: BuchtaRequest, res: BuchtaResponse) => {
+                // @ts-ignore always
+                let path = new URL(req.url).pathname;
 
-            if (!route.originalPath) continue;
-            router.get(route.originalPath, async (_: BuchtaRequest, s: BuchtaResponse) => {
-                s.sendFile(route.path ?? "");
+                res.send(await route.func(req.originalRoute, path));
+                res.setHeader("Content-Type", "text/html");
             });
         } else {
-            // @ts-ignore types
-            router.get(route.route, async (r: BuchtaRequest, s: BuchtaResponse) => {
-                // @ts-ignore always
-                let path = decodeURI(r.url.match(/\d(?=\/).+/)[0].slice(1));
+            if (!this.config?.ssr && "html" in route) {
+                router.get(dirname(route.route), (req: BuchtaRequest, res: BuchtaResponse) => {
+                    res.send(route.html);
+                    res.setHeader("Content-Type", "text/html");
+                });
+            }
 
-                // @ts-ignore it is a func
-                s.send(await route.content(r.originalRoute, path));
-                s.setHeader("Content-Type", "text/html");
-            });
+            if ("dependencies" in route) {
+            }
+
+            if (!("html" in route)) {
+                router.get(route.route, (_: any, s: BuchtaResponse) => s.sendFile(route.path));
+                router.get(route.originalRoute, (_: any, s: BuchtaResponse) => s.sendFile(route.path));
+            }
         }
     }
 

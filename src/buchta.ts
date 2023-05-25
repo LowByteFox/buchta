@@ -1,33 +1,19 @@
 import { readFileSync } from "fs";
-import { Mediator } from "./build/mediator";
-import { handler, ssrPageBuildFunction } from "./build/page_handler";
+import { BuildPage, Mediator } from "./build/mediator";
 import { tsTranspile } from "./build/transpilers/typescript";
-import { TSDeclaration } from "./build/tsgen";
+import { EventManager } from "./utils/events";
 import { BuchtaLogger } from "./utils/logger";
-import devServer, { earlyHook } from "./dev";
-import pageBuilder from "./build";
-import { CustomBundle } from "./bundleToolGen";
-import { PluginManager, ServerPlugin } from "./PluginManager";
-import { PluginBuilder } from "bun";
-import { EventEmitter } from "node:events";
-import { transpiler } from "./build/transpiler";
+import { PluginManager } from "./PluginManager";
+import { TranspilerHandler } from "./build/transpiler";
+import { PageHandlerFunc, SSRPageHandlerFunc } from "./utils/pages";
+import { BunPlugin } from "bun";
+import devServer, { earlyHook } from "./server/dev.ts";
 
 export interface BuchtaPlugin {
     name: string;
-    dependsOn: string[];
-    conflictsWith: string[];
-    driver?: (this: Buchta) => void;
-}
-
-interface BuilderAPI {
-    addTranspiler: (target: string, result: string, handler: transpiler) => void;
-    addPageHandler: (extension: string, handler: handler) => void;
-    addSsrPageHandler: (extension: string, handler: ssrPageBuildFunction) => void;
-    addType: (extension: string, type: TSDeclaration | string, references?: {type: "types" | "path", value: string}[]) => void;
-    globalDeclarations: (string | TSDeclaration)[];
-    moduleDeclarations: {name: string; content: (TSDeclaration|string)[], globals?: (TSDeclaration|string)[] }[];
-    references: {type: "types" | "path", value: string}[];
-    imports: string[];
+    dependsOn?: string[];
+    conflictsWith?: string[];
+    driver: (this: Buchta) => void;
 }
 
 export interface BuchtaConfig {
@@ -38,210 +24,165 @@ export interface BuchtaConfig {
     plugins?: BuchtaPlugin[];
 }
 
-export class Buchta extends EventEmitter {
-    private _builder: Mediator;
-    private conf?: BuchtaConfig;
-    preparationFinished = false;
-    logger;
-    private plugins: BuchtaPlugin[];
-    pages: any[] = [];
-    bundle: CustomBundle;
-    private bundleHandlers: Function[] = [];
-    fileCache: Map<string, string> = new Map();
-    pluginManager: PluginManager = new PluginManager(this);
+export class Buchta extends EventManager {
+    // private for the functionality -> may have API
+    private builder: Mediator;
+    private pluginManager = new PluginManager(this);
+    private pages: any[] = [];
+    private fileCache: Map<string, string> = new Map();
 
-    builder: BuilderAPI;
-    rootDir: string;
-    port: number;
-    ssr: boolean;
-    dirs: string[];
+    // public for use
+    config?: BuchtaConfig;
+    logger: any;
+    earlyHook?: (build: Buchta) => void;
 
-    attachToBundler(handler: (bun: CustomBundle) => void) {
-        this.bundleHandlers.push(handler);
+    // API
+    addTranspiler(source: string, target: string, handler: TranspilerHandler) {
+        this.builder.addTranspiler(source, target, handler);
+    }
+    addPageHandler(source: string, handler: PageHandlerFunc) {
+        this.builder.addPageHandler(source, handler);
+    }
+    addSSRPageHandler(source: string, handler: SSRPageHandlerFunc) {
+        this.builder.addSSRPageHandler(source, handler);
     }
 
-    constructor(defaults = true, quiet = false, config?: BuchtaConfig) {
+    setServerPlugin(plug: BunPlugin) {
+        this.pluginManager.setServerPlugin(plug);
+    }
+    setBundlerPlugin(plug: BunPlugin) {
+        this.pluginManager.setBundlerPlugin(plug);
+    }
+
+    constructor(quiet = false, config?: BuchtaConfig) {
         super();
         this.logger = BuchtaLogger(quiet);
+
+        this.logger.info("Loading config");
+
         if (!config) {
             try {
-                this.conf = require(process.cwd() + "/buchta.config.ts").default;
-                this.logger("Done loading config", "success");
-            } catch (e) {
+                this.config = require(process.cwd() + "/buchta.config.ts").default;
+                this.logger("Config loaded without issues", "success");
+            } catch (e: any) {
                 this.logger.error("Failed to load the config: ");
                 console.log(e);
             }
         } else {
-            this.conf = config;
+            this.config = config;
         }
 
-        this.rootDir = this.getOrDef("rootDir", process.cwd());
-        this.port = this.getOrDef("port", 3000);
-        this.ssr = this.getOrDef("ssr", true);
-        this.dirs = this.getOrDef("dirs", ["public"]);
-        this.plugins = this.getOrDef("plugins", []);
-        this._builder = new Mediator(this.rootDir, this.ssr);
-
-        this.builder = {
-            addTranspiler: (target, result, handler) => {
-                if (this.pluginManager.checkAvailableRegister(target)) {
-                    this.logger.error(`Unable to register "${target}" transpiler, plugin "${this.pluginManager.getRegisterOwner(target)}" has it`);
-                    return;
-                }
-                this._builder.declareTranspilation(target, result, handler);
-                this.pluginManager.pluginRegisterAction(target);
-            },
-            addPageHandler: (extension, handler) => {
-                if (this.pluginManager.checkAvailableRegister(extension + "page")) {
-                    this.logger.error(`Unable to register "${extension}" page handler, plugin "${this.pluginManager.getRegisterOwner(extension + "page")}" has it`);
-                    return;
-                }
-                this._builder.setPageHandler(extension, handler);
-                this.pluginManager.pluginRegisterAction(extension + "page");
-            },
-            addSsrPageHandler: (extension, handler) => {
-                if (this.pluginManager.checkAvailableRegister(extension + "ssr")) {
-                    this.logger.error(`Unable to register "${extension}" ssr handler, plugin "${this.pluginManager.getRegisterOwner(extension + "ssr")}" has it`);
-                    return;
-                }
-                this._builder.setSSRPageHandler(extension, handler);
-                this.pluginManager.pluginRegisterAction(extension + "ssr");
-            },
-            addType: (extension, type, references: {type: "types" | "path", value: string}[] = []) => {
-                if (this.pluginManager.checkAvailableRegister(extension + "types")) {
-                    this.logger.error(`Unable to register types for "${extension}", plugin "${this.pluginManager.getRegisterOwner(extension + "type")}" have them`);
-                    return;
-                }
-                this._builder.setTypeGen(extension, type);
-                this._builder.setTypeImports(extension, references);
-                this.pluginManager.pluginRegisterAction(extension + "types");
-            },
-            moduleDeclarations: this._builder.moduleDeclarations,
-            globalDeclarations: this._builder.globalDeclarations,
-            references: this._builder.references,
-            imports: this._builder.imports
-        }
-
-        this.bundle = new CustomBundle(this.rootDir);
-        if (defaults) {
-            earlyHook(this);
-        }
+        this.builder = new Mediator(this.config?.rootDir ?? process.cwd(), this.config?.ssr ?? true);
     }
 
     async setup() {
+        this.emit("beforeSetup", this);
+        this.earlyHook?.(this);
         this.logger.info("Configuring build system");
-        this._builder.prepare(this.dirs);
-        this.bundleHandlers.forEach(b => b(this.bundle));
-        this.bundle.dump();
-        this._builder.declareTranspilation("ts", "js", tsTranspile);
-        this._builder.setPageHandler("html", (_: string, path: string) => {
-            const content = readFileSync(path, {"encoding": "utf8"});
-            return content;
-        });
-        this._builder.setSSRPageHandler("html", (_1: string, _2: string, csrHTML: string, ..._: string[]) => {
-            return csrHTML;
-        });
-        this.logger.info("Done configuring build system");
+        this.builder.addTranspiler("ts", "js", tsTranspile);
+        this.builder.addPageHandler("html", (_: any, path: string) => readFileSync(path, {encoding: "utf-8"}));
+        this.builder.addSSRPageHandler("html", (_: any, _1: any, html: string, _3: any) => Promise.resolve(html));
+
+        this.logger.success("Build system configured");
         this.logger.info("Loading plugins");
 
-        for (const plug of this.plugins) {
+        for (const plug of this.config?.plugins ?? []) {
             const { driver } = plug;
-            delete plug.driver;
             if (this.pluginManager.addPlugin(plug)) {
-                driver?.call(this);
-                this.logger.success(`Plugin "${plug.name}" was loaded!`);
+                try {
+                    driver?.call(this);
+                    this.logger.success(`Plugin "${plug.name}" was loaded!`);
+                } catch (e: any) {
+                    this.logger.error(`Plugin "${plug.name}" wasn't loaded! ${e.toString()}`);
+                    console.log(e);
+                }
             }
         }
 
-        const buchta = this;
-
-        const filesPlugin: ServerPlugin = {
-            name: "others",
-            async setup(build: PluginBuilder) {
+        const otherFiles: BunPlugin = {
+            name: "other files plugin",
+            setup: (build) => {
                 // @ts-ignore sush
-                build.onLoad({ filter: /\..+/}, ({ path }) => {
-                    let ext = path.match(/\.(js|mjs|cjs|ts|jsx|tsx|txt|json|toml)$/g);
+                build.onLoad({ filter: /.+/ }, ({ path }) => {
+                    let ext: RegExpMatchArray | string | null = path.match(/\.(js|mjs|cjs|ts|mts|cts|jsx|tsx|txt|json|toml|wasm)$/g);
                     if (!ext) {
-                        const data = {
+                        let data = {
                             path,
-                            route: ""                        
+                            route: ""
                         }
 
-                        if (!buchta.fileCache.has(path) && !buchta.preparationFinished) {
-                            buchta.emit("fileLoad", data);
-                            buchta.fileCache.set(path, data.path);
-                        } else {
-                            data.route = buchta.fileCache.get(path) ?? "";
-                        }
- 
+                        if (!this.fileCache.has(path)) {
+                            this.emit("fileLoad", data);
+                            this.fileCache.set(path, data.route);
+                        } else data.route = this.fileCache.get(path) ?? "";
+
                         return {
                             contents: `export default "${data.route}"`,
                             loader: "js"
                         }
                     }
-                    // @ts-ignore types
-                    ext = ext[0].split(".").pop();
-                    // @ts-ignore types
+                    ext = ext![0].split(".").pop() ?? "";
                     if (ext == "mjs" || ext == "cjs") ext = "js";
+                    if (ext == "mts" || ext == "cts") ext = "ts";
                     return {
                         contents: readFileSync(path, {encoding: "utf-8"}),
-                        loader: ext
+                        loader: ext ?? "js"
                     }
                 })
-            }
+            },
         }
-
-        this.pluginManager.setServerPlugin(filesPlugin);
-        this.pluginManager.setBundlerPlugin(filesPlugin);
-
+        // must be for both
+        this.pluginManager.setServerPlugin(otherFiles);
+        this.pluginManager.setBundlerPlugin(otherFiles);
         this.pluginManager.injectPlugins();
 
-        this.logger.info("Done loading plugins");
-
-        this.logger.info("Executing the build system");
+        this.logger.success("Plugins loaded");
+        this.logger.info("Starting up the build system");
+        this.builder.prepare();
         this.logger.info("Transpiling");
-        await this._builder.transpile();
-        this._builder.toFS();
-        this.logger.info("Generating Pages");
-        await this._builder.pageGen(this.pluginManager.getBundlerPlugins());
-        this.logger.info("Generating Types");
-        this._builder.typeGen();
+        try {
+            await this.builder.transpileEverything();
+        } catch (e: any) {
+            this.logger.error("Transpilation failed, STOP!");
+            console.log(e);
+            process.exit(1);
+        }
+        this.logger.success("Finished transpilation");
+        this.builder.saveEverything();
+        this.logger.info("Generating pages");
+        let pages = [];
+        try {
+            pages = await this.builder.generatePages();
+        } catch (e: any) {
+            this.logger.error("Page generation failed, STOP!");
+            console.log(e);
+            process.exit(1);
+        }
+        this.logger.success("Pages generated");
+        this.logger.info("Bundling pages");
+        try {
+            await this.builder.bundlePages(pages as BuildPage[], this.pluginManager.getBundlerPlugins());
+        } catch(e: any) {
+            this.logger.error("Page bundling failed, STOP");
+            console.log(e);
+            process.exit(1);
+        }
+        this.logger.success("Pages bundled");
+        pages.push(...this.builder.getSSRPages());
+        pages.push(...this.builder.getLeftovers());
 
-        this.logger.info("Emitting Routes");
-
-        this.pages = this._builder.pageRouteGen();
-
-        this.preparationFinished = true;
-
-        return Promise.resolve(this);
+        this.pages = pages;
+        this.emit("afterSetup", this);
+        return this;
     }
 
     dev() {
-        this.logger.info(`Started dev server on port ${this.port}`);
-        devServer(this.port, this.pages);
-    }
-
-    export() {
-        this.logger.info(`Building webpage`);
-        pageBuilder(this.pages);
-    }
-
-    private getOrDef(route: string, def: any) {
-        let base: any = this.conf;
-        if (!base) return def;
-        for (const path of route.split(".")) {
-            if (typeof base[path] != "undefined") {
-                base = base[path];
-            }
-            else return def;
-        }
-        if (typeof base == "undefined") return def;
-        return base;
+        this.logger.info(`Started dev server on port ${this.config?.port ?? 3000}`);
+        devServer.call(this, this.config?.port ?? 3000, this.pages);
     }
 }
 
-const app = new Buchta()
-
-await app.setup();
-
-app.dev();
+const a = new Buchta();
+a.earlyHook = earlyHook;
+await a.setup();
+a.dev();

@@ -73,9 +73,9 @@ export const compileVue = (
                 code = `import { createSSRApp } from "vue";\n${codeImports}${code}\nconst a = createSSRApp(sfc);\n${components}${plugins}a.mount("#__buchta");`;
                 return tsToJs(code);
             }
+        } else {
+            code += "export default sfc;";
+            return tsToJs(code);
         }
     }
-    // vue 2
-    throw "I am sorry but vue 2 is going to be deprecated by the end of 2023!";
-    
 }

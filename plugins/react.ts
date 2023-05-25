@@ -63,16 +63,16 @@ export function react(conf: ReactConfig): BuchtaPlugin {
         dependsOn: [],
         conflictsWith: [],
         driver(this: Buchta) {
-            this.builder.addTranspiler("jsx", "js", reactTranspile);
-            this.builder.addPageHandler("jsx", reactPage);
+            this.addTranspiler("jsx", "js", reactTranspile);
+            this.addPageHandler("jsx", reactPage);
             if (conf.tsx) {
-                this.builder.addTranspiler("tsx", "js", reactTranspile);
-                this.builder.addPageHandler("tsx", reactPage);
+                this.addTranspiler("tsx", "js", reactTranspile);
+                this.addPageHandler("tsx", reactPage);
             }
 
-            if (this.ssr) {
-                this.builder.addSsrPageHandler("jsx", reactSSRPage);
-                if (conf.tsx) this.builder.addSsrPageHandler("tsx", reactSSRPage);
+            if (this.config?.ssr) {
+                this.addSSRPageHandler("jsx", reactSSRPage);
+                if (conf.tsx) this.addSSRPageHandler("tsx", reactSSRPage);
             }
         }
     }

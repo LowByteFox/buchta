@@ -67,13 +67,13 @@ export function svelte(): BuchtaPlugin {
         dependsOn: [],
         conflictsWith: [],
         driver(this: Buchta) {
-            this.builder.addTranspiler("svelte", "js", svelteTranspile);
-            this.builder.addPageHandler("svelte", sveltePage);
-            if (this.ssr) {
-                this.builder.addSsrPageHandler("svelte", svelteSSRPage);
+            this.addTranspiler("svelte", "js", svelteTranspile);
+            this.addPageHandler("svelte", sveltePage);
+            if (this.config?.ssr) {
+                this.addSSRPageHandler("svelte", svelteSSRPage);
             }
 
-            this.pluginManager.setBundlerPlugin({
+            this.setBundlerPlugin({
                 name: "svelte",
                 async setup(build: PluginBuilder) {
                     build.onLoad({ filter: /\.svelte$/ }, ({ path }) => {
@@ -92,17 +92,15 @@ export function svelte(): BuchtaPlugin {
                 },
             })
 
-            const b = this;
-
-            this.pluginManager.setServerPlugin({
+            this.setServerPlugin({
                 name: "Svelte",
-                async setup(build: PluginBuilder) {
+                setup: async (build: PluginBuilder) => {
                     build.onLoad({ filter: /\.svelte$/ }, ({ path }) => {
                         const content = readFileSync(path, {encoding: "utf-8"})
                         const out = compile(content, {
-                            generate: b.ssr ? "ssr" : "dom",
+                            generate: this.config?.ssr ? "ssr" : "dom",
                             hydratable: true
-                        })
+                        });
 
                         return {
                             contents: out.js.code,

@@ -1,14 +1,9 @@
-import { PluginBuilder, } from "bun";
+import { BunPlugin } from "bun";
 import { Buchta, BuchtaPlugin } from "./buchta";
 
-export interface ServerPlugin {
-    name: string;
-    setup: (build: PluginBuilder) => Promise<void>
-}
-
 export class PluginManager {
-    private bundlerBunPlugins: ServerPlugin[] = [];
-    private serverBunPlugins: ServerPlugin[] = [];
+    private bundlerBunPlugins: BunPlugin[] = [];
+    private serverBunPlugins: BunPlugin[] = [];
     private plugins: Map<string, BuchtaPlugin> = new Map();
     private registers: Map<string, string> = new Map();
     private s: Buchta;
@@ -24,14 +19,14 @@ export class PluginManager {
             return false;
         }
 
-        for (const plug of data.dependsOn) {
+        for (const plug of data.dependsOn ?? []) {
             if (!this.plugins.has(plug)) {
                 this.s.logger.error(`Plugin "${data.name}" requires plugin "${plug}"!`)
                 return false;
             }
         }
 
-        for (const plug of data.conflictsWith) {
+        for (const plug of data.conflictsWith ?? []) {
             if (this.plugins.has(plug)) {
                 this.s.logger.error(`Plugin "${data.name}" conflicts with plugin "${plug }"!`)
                 return false;
@@ -56,7 +51,7 @@ export class PluginManager {
         return this.registers.get(type);
     }
 
-    setBundlerPlugin(plug: ServerPlugin) {
+    setBundlerPlugin(plug: BunPlugin) {
         this.bundlerBunPlugins.push(plug);
     }
 
@@ -64,7 +59,7 @@ export class PluginManager {
         return this.bundlerBunPlugins;
     }
 
-    setServerPlugin(plug: ServerPlugin) {
+    setServerPlugin(plug: BunPlugin) {
         this.serverBunPlugins.push(plug);
     }
 

@@ -1,328 +1,272 @@
-import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "fs";
-import { basename, dirname, join, normalize, relative } from "path";
-import { PathResolver } from "./utils/path_helper.js";
-import { Transpiler, transpiler } from "./transpiler.js";
-import { PageHandler, handler, ssrPageBuildFunction } from "./page_handler.js";
-import { Bundler } from "./bundler.js";
-import { TSDeclaration, TSGenerator, TSTree } from "./tsgen.js";
-import { ServerPlugin } from "../PluginManager.js";
-import { Cache } from "./cache/index.js";
+import { Transpiler, TranspilerHandler } from "./transpiler";
+import { EventManager } from "../utils/events";
+import { getFiles, makeDir } from "../utils/fs";
+import { PathResolver, TranspiledFile } from "../utils/paths";
+import { basename, dirname, normalize } from "node:path";
+import { writeFileSync } from "node:fs";
+import { PageHandler, PageHandlerFunc, SSRPageHandlerFunc } from "../utils/pages";
+import { Bundler } from "./bundler";
+import { BunPlugin } from "bun";
 
-function traverseDir(dirPath: string, baseDir: string, result: [string[]] = [[]]) {
-    const files = readdirSync(dirPath);
-
-    files.forEach(file => {
-        const filePath = join(dirPath, file);
-
-        if (statSync(filePath).isDirectory()) {
-            traverseDir(filePath, baseDir, result);
-        } else {
-            const relativePath = relative(baseDir, filePath);
-            result[0].push(relativePath);
-        }
-    });
-}
-
-export interface transpilationFile {
+export interface BuildFile {
     route: string;
     path: string;
 }
 
-export class Mediator {
-    private rootPath: string;
-    private ssrStep = false;
-    private pathResolver?: PathResolver;
-    private files: transpilationFile[] = [];
-    private transpiler: Transpiler = new Transpiler();
+export interface BuildPage {
+    route: string;
+    html: string;
+    dependencies: string[];
+    originalRoute: string;
+}
+
+export interface SSRPage {
+    route: string;
+    func: SSRPageHandlerFunc;
+}
+
+export interface BundledCode {
+    text: string;
+    path: string;
+}
+
+export interface Leftover {
+    route: string;
+    path: string;
+    originalRoute: string;
+}
+
+export class Mediator extends EventManager {
+    // build required fields
+    private files: BuildFile[] = [];
     private resolvers: Record<string, string> = {};
-    private called = false;
-    private transpiled: any[] = [];
-    private SSRd: Map<string, any> = new Map();
-    private ssrPages: Map<string, (originalRoute: string, route: string) => Promise<string>> = new Map();
+    private pages: string[] = []
+    private ssrPages: Map<string, any> = new Map();
+    private bundled: string[] = []
+
+    // transpiled files
+    private transpiled: Map<BuildFile, TranspiledFile> = new Map();
+    private ssrTranspiled: Map<BuildFile, any> = new Map();
+
+    // helper classes
+    private pathResolver?: PathResolver;
+    private transpiler: Transpiler = new Transpiler();
     private pageHandler = new PageHandler();
-    private bundler: Bundler = new Bundler();
-    private tsgen: TSGenerator = new TSGenerator();
-    private pages: Array<string> = [];
-    private typeGens: Map<string, TSDeclaration | string> = new Map();
-    private typeImports: Map<string, {type: "types" | "path", value: string}[]> = new Map();
-    private reUse: Map<string, string> = new Map();
-    private cache: Cache | undefined;
-    private lateInit = true;
-    private transpileSSR;
-    private indexes: string[] = [];
+    private bundler = new Bundler();
 
-    globalDeclarations: (string | TSDeclaration)[] = [];
-    moduleDeclarations: {name: string; content: (TSDeclaration|string)[], globals?: (TSDeclaration|string)[] }[] = [];
-    references: {type: "types" | "path", value: string}[] = [];
-    imports: string[] = [];
+    // behaviour config
+    private rootDir: string;
+    private ssrEnabled: boolean;
 
-    constructor(rootPath: string, ssr = false) {
-        this.rootPath = rootPath;
-        this.ssrStep = ssr;
-        this.transpileSSR = false;
+    // useful paths
+    private outputPath: string;
+    private ssrOutputPath: string;
+
+    constructor(rootDir: string, ssr = false) {
+        super();
+        this.rootDir = rootDir;
+        this.ssrEnabled = ssr;
+        this.outputPath = this.rootDir + "/.buchta/output/";
+        this.ssrOutputPath = this.rootDir + "/.buchta/output-ssr/";
     }
 
-    prepare(dirs: string[] = ["public"]) {
-        this.mkdir(".buchta/output/");
-        if (this.ssrStep) this.mkdir(".buchta/output-ssr/");
-        for (const d of dirs) {
-            const arr: string[] = [];
-            traverseDir(normalize(this.rootPath + `/${d}`), normalize(this.rootPath + `/${d}`), [arr]);
+    prepare(directories = ["public"]) {
+        makeDir(this.rootDir + "/.buchta/output/");
+        if (this.ssrEnabled)
+            makeDir(this.rootDir + "/.buchta/output-ssr/");
 
-            const files = arr.map(i => ({ route: "/" + i, path: normalize(this.rootPath + `/${d}/` + i) }));
+        let length = directories.length;
+        for (let i = 0; i < length; i++) {
+            let dir = directories[i];
+            let cachedPath = this.rootDir + '/' + dir;
 
-            this.files.push(...files);
-        }
-        if (existsSync(normalize(this.rootPath + "/.buchta/cache.json"))) {
-            this.lateInit = false
-        } 
-    }
+            let files = getFiles(cachedPath);
+            let filesLength = files.length;
 
-    async transpile() {
-        if (!this.lateInit && !this.transpileSSR) {
-            const newFiles = this.files.map(f => ({...f, content: readFileSync(f.path)}));
-            this.cache = new Cache(newFiles);
-            const out = this.cache.getChanges(normalize(this.rootPath + "/.buchta/cache.json"), this.indexes);
-            for (const re of out.reuse) {
-                this.reUse.set(re.route, re.reUse);
-                for (const i in this.files) {
-                    if (this.files[i].route == re.route) {
-                        this.files.splice(parseInt(i), 1);
-                    }
-                }
-            }
-
-            for (const re of out.changed) {
-                this.reUse.set(re.route, re.reUse);
-            }
-        }
-        if (!this.called) {
-            this.pathResolver = new PathResolver(this.rootPath, this.resolvers, [...this.files.map(i => i.route), ...Array.from(this.reUse.keys())], this.reUse);
-            this.called = true;
-        }
-        for (const file of this.files) {
-            const code = await this.transpiler.compile(file, this.ssrStep, this.transpileSSR);
-            const resolved = this.pathResolver?.resolveDeps(file, code);
-            if (!this.transpileSSR) {
-                this.transpiled.push(resolved);
-            } else {
-                this.SSRd.set(resolved?.path ?? "", resolved);
-            }
-        }
-        if (this.ssrStep && !this.transpileSSR) {
-            this.transpileSSR = true;
-            await this.transpile();
-        } else if (this.transpileSSR) {
-            this.transpileSSR = false;
-        }
-    }
-
-    toFS() {
-        const outPath = this.rootPath + "/.buchta/output/";
-        const ssrPath = this.rootPath + "/.buchta/output-ssr/";
-
-        for (const output of this.transpiled) {
-            const path = normalize(outPath + output.path);
-            this.mkdir(".buchta/output/" + dirname(output.path).slice(1));
-            writeFileSync(path, output.content);
-        }
-
-        if (this.ssrStep) {
-            for (const [_, output] of this.SSRd) {
-                const path = normalize(ssrPath + output.path);
-                this.mkdir(".buchta/output-ssr/" + dirname(output.path).slice(1));
-                writeFileSync(path, output.content);
-            }
-        }
-    }
-
-    typeGen() {
-        const ignoreExImports: string[] = [];
-
-        const tree: TSTree = {
-            imports: [],
-            modules: []
-        }
-
-        for (const out of this.transpiled) {
-            if (this.pathResolver?.hasTSDeclaration(out.originalPath)) {
-                if (out.originalPath.endsWith("ts") || out.originalPath.endsWith("js")) continue;
-                const ext = out.originalPath.split(".").pop();
-
-                if (!ignoreExImports.includes(ext)) {
-                    const references = this.typeImports.get(ext);
-                    ignoreExImports.push(ext);
-                    tree.references = references;
-                }
-
-                const declaration = this.typeGens.get(ext);
-                tree.modules?.push({
-                    name: out.originalPath,
-                    content: [declaration ?? ""]
+            for (let j = 0; j < filesLength; j++) {
+                this.files.push({
+                    route: files[j].slice(cachedPath.length),
+                    path: files[j]
                 });
             }
         }
-
-        this.tsgen.declarations.push({
-            path: "/types/pages.d.ts",
-            tree
-        })
-
-        this.tsgen.declarations.push({
-            path: "/buchta.d.ts",
-            tree: {
-                references: [{
-                    type: "path",
-                    value: "types/pages.d.ts"
-                }, ...this.references],
-                globals: this.globalDeclarations,
-                modules: this.moduleDeclarations,
-                imports: this.imports
-            }
-        })
-
-        writeFileSync(normalize(this.rootPath + "/.buchta/buchta.d.ts"), this.tsgen.toString("/buchta.d.ts"));
-        writeFileSync(normalize(this.rootPath + "/.buchta/tsconfig.json"), this.tsgen.tsconfigGen());
-        this.mkdir(".buchta/types/");
-
-        writeFileSync(normalize(this.rootPath + "/.buchta/types/pages.d.ts"), this.tsgen.toString("/types/pages.d.ts"));
+        this.emit("afterPreparation", this.files);
+        this.pathResolver = new PathResolver(this.rootDir, this.resolvers, this.files);
     }
 
-    async pageGen(plugins: ServerPlugin[]) {
-        const outPath = this.rootPath + "/.buchta/output/";
-        const ssrPath = this.rootPath + "/.buchta/output-ssr/";
-        const generatedPages: any[] = [];
-        const bundled: string[] = [];
+    async transpileFile(file: BuildFile, SSR = false) {
+        const code = await this.transpiler.compile(file, this.ssrEnabled, this.ssrEnabled && SSR);
+        const resolved = this.pathResolver!.resolveDeps(file, code);
+        if (!SSR)
+            this.transpiled.set(file, resolved);
+        else
+            this.ssrTranspiled.set(file, resolved);
+        this.emit("fileTranspiled", file, SSR);
+    }
 
-        for (const input of this.transpiled) {
-            this.pageSet(input, outPath, ssrPath, generatedPages, false);
+    async transpileEverything() {
+        let length = this.files.length;
+        for (let i = 0; i < length; i++) {
+            await this.transpileFile(this.files[i]);
         }
 
-        for (const page of generatedPages) {
-            for (const dep of page.deps) {
-                if (bundled.indexOf(dep) == -1) {
-                    const path = normalize(outPath + dep);
-                    const bundlerOutput = await this.bundler.bundle([path], plugins);
-                    if (bundlerOutput[0])
-                        writeFileSync(outPath + dep, bundlerOutput[0]);
-                }
-            }
-
-            writeFileSync(dirname(outPath + page.route) + "/index.html", page.code);
-            this.pages.push(dirname(page.route));
-        }
-
-        if (this.lateInit) {
-            // init the graph here
-            const newFiles = this.files.map(f => ({...f, content: readFileSync(f.path), reUse: this.pathResolver?.getPath(f.route)}));
-            this.cache = new Cache(newFiles);
-            this.cache.saveCache(normalize(this.rootPath + "/.buchta/cache.json"), this.indexes);
-        } else {
-            const cacheGeneratedPages: any[] = [];
-            for (const [route, newRoute] of this.reUse) {
-                const out = this.pageSet({path: newRoute, originalPath: route}, outPath, ssrPath, cacheGeneratedPages, true);
-                if (!out) {
-                    this.transpiled.push({path: newRoute, originalPath: route, content: "cache"});
-                }
-            }
-
-            if (!this.ssrStep) {
-                for (const page of cacheGeneratedPages) {
-                    this.pages.push(dirname(page.route));
-                }
-            } else {
-                for (const page of cacheGeneratedPages) {
-                    this.transpiled.push({path: page.route, originalPath: page.originalRoute, content: "cache" })
-                }
-            }
-
-            this.cache?.saveCache(normalize(this.rootPath + "/.buchta/cache.json"), this.indexes);
-        }
-    }
-
-    private pageSet(input: {originalPath: string, path: string}, outPath: string, ssrPath: string, generatedPages: any[], cache: boolean): boolean {
-        const split = basename(normalize(input.originalPath)).split(".");
-        const ext = split?.pop();
-        if (!ext) return false;
-        if (split.join(".") == "index") { 
-            if (ext == "js" || ext == "ts") return false;
-            const out: string | null = this.pageHandler.callHandler(ext, input.path, normalize(outPath + input.path), cache);
-            if (!out) return false;
-            const deps = this.pathResolver?.resolvePageDeps(out, input.path);
-
-            if (this.ssrStep) {
-                this.ssrPages.set(dirname(input.path), async (_: string, route: string) => {
-                    const cache = this.pageHandler.getSSRCache(route) ?? "";
-                    if (cache) return cache;
-
-                    const ssrOut = await this.pageHandler.callSSRHandler(ext, dirname(input.path), route, out, normalize(ssrPath + input.path));
-                    if (!ssrOut) return "";
-                    this.pageHandler.setSSRCache(route, ssrOut);
-                    return ssrOut;
-                });
-            }
-
-            if (generatedPages) {
-                generatedPages.push({
-                    code: out,
-                    deps,
-                    route: input.path,
-                    originalRoute: input.originalPath
-                });
-            }
-            return true;
-        }
-        return false;
-    }
-
-    configureSSR(srr: boolean) {
-        this.ssrStep = srr;
-    }
-
-    setPageHandler(extension: string, handler: handler) {
-        this.indexes.push(`index.${extension}`)
-        this.pageHandler.assignHandler(extension, handler);
-    }
-
-    setSSRPageHandler(extension: string, handler: ssrPageBuildFunction) {
-        this.pageHandler.assignSSRHandler(extension, handler);
-    }
-
-    declareTranspilation(target: string, result: string, handler: transpiler) {
-        this.resolvers[target] = result;
-        this.transpiler.setTranspiler(target, handler);
-    }
-
-    private mkdir(path: string) {
-        path = normalize(this.rootPath + "/" + path) + "/";
-        if (!existsSync(path))
-            mkdirSync(path, { recursive: true });
-    }
-
-    pageRouteGen(): {route: string; content: string | Function; path?: string; originalPath: string}[] {
-        const arr: any[] = [];
-
-        for (const t of this.transpiled) {
-            arr.push({route: t.path, content: t.content, path: normalize(this.rootPath + "/.buchta/output/" + t.path), originalPath: t.originalPath});
-        }
-        if (this.ssrStep) {
-            for (const [route, page] of this.ssrPages) {
-                arr.push({route: route, content: page});
-            }
-        } else {
-            for (const page of this.pages) {
-                arr.push({route: page, path: normalize(this.rootPath + "/.buchta/output/" + page + "/index.html"), content: ""});
+        if (this.ssrEnabled) {
+            for (let i = 0; i < length; i++) {
+                await this.transpileFile(this.files[i], true);
             }
         }
 
-        return arr;
+        this.emit("afterTranspilation", this.transpiled, this.ssrTranspiled);
     }
 
-    setTypeGen(extension: string, type: TSDeclaration | string) {
-        this.typeGens.set(extension, type)
+    saveFile(file: BuildFile) {
+        let transpiled = this.transpiled.get(file)!;
+        let out = normalize(this.outputPath + transpiled.route);
+        makeDir(dirname(out));
+        writeFileSync(out, transpiled.content);
+
+        if (this.ssrEnabled) {
+            let ssrOut = normalize(this.ssrOutputPath + transpiled.route);
+            transpiled = this.ssrTranspiled.get(file);
+            makeDir(dirname(ssrOut));
+            writeFileSync(ssrOut, transpiled.content);
+        }
     }
 
-    setTypeImports(extension: string, imports: {type: "types" | "path", value: string}[]) {
-        this.typeImports.set(extension, imports);
+    saveEverything() {
+        let length = this.files.length;
+        for (let i = 0; i < length; i++) {
+            this.saveFile(this.files[i]);
+        }
+    }
+
+    async generatePage(transpiled: TranspiledFile): Promise<BuildPage | undefined> {
+        const splited = basename(transpiled.originalRoute).split(".");
+        const ext = splited.pop();
+        if (!ext) return;
+        if (splited.join(".") == "index") {
+            if (ext == "js" || ext == "ts") return;
+
+            this.emit("beforePagePageBuild", transpiled);
+
+            const csrHTML = this.pageHandler.callHandler(ext, transpiled.route, normalize(this.outputPath + transpiled.route));
+
+            if (!csrHTML) return;
+
+            const dependencies = this.pathResolver!.resolvePageDeps(csrHTML, transpiled.route);
+            
+            if (this.ssrEnabled) {
+                this.ssrPages.set(transpiled.originalRoute,
+                                  this.generateSSRFunction(ext, transpiled.originalRoute, csrHTML, normalize(this.ssrOutputPath + transpiled.route))
+                                 );
+            }
+
+            const page: BuildPage = {
+                html: csrHTML,
+                dependencies,
+                route: transpiled.route,
+                originalRoute: transpiled.originalRoute
+            }
+
+            this.emit("afterPagePageBuild", transpiled, page);
+
+            return page;
+        }
+    }
+
+    async generatePages() {
+        let pages: (BuildPage | SSRPage | Leftover)[] = [];
+        for (let [_, transpiled] of this.transpiled) {
+            let out = await this.generatePage(transpiled);
+            if (out) {
+                pages.push(out);
+            }
+        }
+        this.emit("afterPageGen", pages);
+        return pages;
+    }
+
+    async bundlePage(page: BuildPage, plugins: BunPlugin[]) {
+        let length = page.dependencies.length;
+        let outputs: BundledCode[] = [];
+        for (let i = 0; i < length; i++) {
+            if (this.bundled.indexOf(page.dependencies[i]) == -1) {
+                let path = normalize(this.outputPath + page.dependencies[i]);
+                let output = await this.bundler.bundle([path], plugins);
+                if (output[0]) 
+                    outputs.push({
+                        text: output[0],
+                        path: normalize(this.outputPath + page.dependencies[i])
+                    });
+            }
+        }
+
+        return outputs;
+    }
+
+    async bundlePages(pages: BuildPage[], plugins: BunPlugin[]) {
+        let length = pages.length;
+        for (let i = 0; i < length; i++) {
+            let bundledDeps = await this.bundlePage(pages[i], plugins);
+            let bundledLength = bundledDeps.length;
+            for (let j = 0; j < bundledLength; j++) {
+                writeFileSync(bundledDeps[j].path, bundledDeps[j].text);
+            }
+            writeFileSync(dirname(this.outputPath + pages[i].route) + "/index.html", pages[i].html);
+            this.pages.push(dirname(pages[i].route));
+        }
+        this.emit("afterPageGen", this.pages, this.ssrPages);
+    }
+
+    private generateSSRFunction(extension: string, originalRoute: string, html: string, fileToImport: string) {
+        return async (_: string, route: string) => {
+            const cache = this.pageHandler.getSSRCache(route);
+            if (cache) return cache;
+
+            const out = await this.pageHandler.callSSRHandler(extension, originalRoute, route, html, fileToImport);
+            if (!out) {
+                this.pageHandler.setSSRCache(route, html);
+                return html;
+            }
+            this.pageHandler.setSSRCache(route, out);
+            return out;
+        }
+    }
+
+    getSSRPages() {
+        let out: SSRPage[] = [];
+        for (let [key, func] of this.ssrPages) {
+            out.push({
+                route: key,
+                func
+            });
+        }
+        return out;
+    }
+
+    getLeftovers() {
+        let out: Leftover[] = [];
+        for (const [_, val] of this.transpiled) {
+            out.push({
+                path: normalize(this.outputPath + val.route),
+                route: val.route,
+                originalRoute: val.originalRoute
+            })
+        }
+        return out;
+    }
+
+    // API
+    addTranspiler(source: string, target: string, handler: TranspilerHandler) {
+        this.resolvers[source] = target;
+        this.transpiler.setTranspiler(source, handler);
+    }
+
+    addPageHandler(source: string, handler: PageHandlerFunc) {
+        this.pageHandler.assignHandler(source, handler);
+    }
+
+    addSSRPageHandler(source: string, handler: SSRPageHandlerFunc) {
+        this.pageHandler.assignSSRHandler(source, handler);
     }
 }

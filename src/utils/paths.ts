@@ -1,7 +1,6 @@
-// When you're feeling overwhelmed by the code, remember that you're not alone. There are many others who share your struggles and understand what you're going through. Reach out, connect, and support each other.
-import { dirname, normalize, relative } from "path";
-import { transpilationFile } from "../mediator.js";
+import { dirname, relative } from "path";
 import { resolve } from "path";
+import { BuildFile } from "../build/mediator";
 
 function binaryBufferCheck(buffer: Buffer): boolean {
     for (let i = 0; i < buffer.length; i++) {
@@ -35,6 +34,12 @@ const renameFile = (path: string, toAdd: string, res: Record<string, string>) =>
     return `${split.join(".")}-${toAdd}.${res[ext] ? res[ext] : ext}`
 }
 
+export interface TranspiledFile {
+    content: string | Buffer;
+    route: string;
+    originalRoute: string;
+}
+
 export class PathResolver {
     private res: Record<string, string>;
     private resolved: Map<string, string> = new Map();
@@ -42,14 +47,11 @@ export class PathResolver {
     private jsPathFetch = /.(?<=['"])(\.\/|\/|\.\.\/).+?(?=js['"]).../g;
     private rootDir: string;
     
-    constructor(rootDir: string, extensionResolver: Record<string, string>, files: string[], reUse: Map<string, string>) {
+    constructor(rootDir: string, extensionResolver: Record<string, string>, files: BuildFile[]) {
         this.res = extensionResolver;
         this.rootDir = rootDir;
         for (const file of files) {
-            if (reUse.has(file))
-                this.resolved.set(file, reUse.get(file) || "");
-            else
-                this.resolved.set(file, renameFile(file, nameGen(7), this.res));
+            this.resolved.set(file.route, renameFile(file.route, nameGen(7), this.res));
         }
     }
 
@@ -80,7 +82,7 @@ export class PathResolver {
         return res;
     }
 
-    resolveDeps(file: transpilationFile, content: string | Buffer) {
+    resolveDeps(file: BuildFile, content: string | Buffer): TranspiledFile {
         if (Buffer.isBuffer(content) && !binaryBufferCheck(content)) {
             content = content.toString();
         }
@@ -100,21 +102,12 @@ export class PathResolver {
                 if (newContent) content = newContent;
             }
 
-            const bundleRelative = relative(dirname(file.path), this.rootDir + "/customBundle.ts");
-            if (this.hasTSDeclaration(file.route)) {
-                content = `import "${bundleRelative}"\n${content}`
-            }
-
-            return {
-                content,
-                path: this.resolved.get(file.route) ?? file.route,
-                originalPath: file.route
-            }
         } 
+
         return {
             content,
-            path: this.resolved.get(file.route) ?? file.route,
-            originalPath: file.route
+            route: this.resolved.get(file.route) ?? file.route,
+            originalRoute: file.route
         }
     }
 

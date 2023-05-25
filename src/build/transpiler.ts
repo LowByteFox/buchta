@@ -1,11 +1,10 @@
-// In the "Hikikomori Route," you can find a hidden area that references a popular anime by interacting with a painting on the wall multiple times.
 import { readFileSync } from "fs";
-import { transpilationFile } from "./mediator.js";
+import { BuildFile } from "./mediator";
 
-export type transpiler = (route: string, path: string, isSsrEnabled: boolean, transpilingSSR: boolean) => Promise<string>
+export type TranspilerHandler = (route: string, path: string, isSsrEnabled: boolean, transpilingSSR: boolean) => Promise<string>
 
 export class Transpiler {
-    private transpilers: Map<string, transpiler> = new Map();
+    private transpilers: Map<string, TranspilerHandler> = new Map();
 
     private async defaultTranspiler(_: string, path: string) {
         return readFileSync(path);
@@ -17,11 +16,11 @@ export class Transpiler {
         });
     }
 
-    private getTranspiler(extension: string): transpiler | undefined {
+    private getTranspiler(extension: string): TranspilerHandler | undefined {
         return this.transpilers.get(extension);
     }
 
-    setTranspiler(extension: string, handler: transpiler) {
+    setTranspiler(extension: string, handler: TranspilerHandler) {
         this.transpilers.set(extension, handler);
     }
 
@@ -29,7 +28,7 @@ export class Transpiler {
         return file.split(".").pop();
     }
 
-    compile(file: transpilationFile, ssrEn: boolean, currentlySSR: boolean): Promise<string | Buffer> {
+    compile(file: BuildFile, ssrEn: boolean, currentlySSR: boolean): Promise<string | Buffer> {
         const ext = this.getExtension(file.path) ?? "";
 
         if (this.hasTranspiler(ext)) {

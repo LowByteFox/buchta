@@ -1,27 +1,25 @@
-import { ServerPlugin } from "../PluginManager";
+import { BunPlugin } from "bun";
 
 export class Bundler {
-    async bundle(entrypoints: string[], plugins: ServerPlugin[]) {
-        // @ts-ignore now
-        const out = await Bun.build({
+    async bundle(entrypoints: string[], plugins: BunPlugin[]) {
+        let out = await Bun.build({
             entrypoints,
             plugins,
-        })
+        });
 
-        const outs = [];
+        let outs = [];
 
         const { outputs, logs } = out;
 
-        for (const output of outputs) {
-            const { result } = output;
-            outs.push(await result.text());
+        for (let output of outputs) {
+            outs.push(await output.text());
         }
 
-        if (!logs)
+        if (logs.length == 0)
             return outs;
         else
-            console.log(logs);
-        return outs;
+            console.log(logs.join("\n"));
+        return [];
     }
 }
 

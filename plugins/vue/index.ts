@@ -75,32 +75,30 @@ export default function vue(): BuchtaPlugin {
         dependsOn: [],
         conflictsWith: [],
         driver(this: Buchta) {
-            this.builder.addTranspiler("vue", "js", vueTranspile);
-            this.builder.addPageHandler("vue", vuePage);
-            if (this.ssr) {
-                this.builder.addSsrPageHandler("vue", vueSSRPage);
+            this.addTranspiler("vue", "js", vueTranspile);
+            this.addPageHandler("vue", vuePage);
+            if (this.config?.ssr) {
+                this.addSSRPageHandler("vue", vueSSRPage);
             }
 
-            const b = this;
-
-            this.pluginManager.setBundlerPlugin({
+            this.setBundlerPlugin({
                 name: "vue",
-                async setup(build: PluginBuilder) {
+                setup: async (build: PluginBuilder) => {
                     build.onLoad({ filter: /\.vue$/ }, ({ path }) => {
                         return {
-                            contents: compileVue(path, b.ssr, false, App.clientImports, App.clientPlugins, App.clientComponents) ?? "",
+                            contents: compileVue(path, this.config?.ssr ?? true, false, App.clientImports, App.clientPlugins, App.clientComponents) ?? "",
                             loader: "js"
                         }
                     })
                 }
             });
 
-            this.pluginManager.setServerPlugin({
+            this.setServerPlugin({
                 name: "vue",
-                async setup(build: PluginBuilder) {
+                setup: async (build: PluginBuilder) => {
                     build.onLoad({ filter: /\.vue$/ }, ({ path }) => {
                         return {
-                            contents: compileVue(path, b.ssr, b.ssr, App.clientImports, App.clientPlugins, App.clientComponents) ?? "",
+                            contents: compileVue(path, this.config?.ssr ?? true, this.config?.ssr ?? true, App.clientImports, App.clientPlugins, App.clientComponents) ?? "",
                             loader: "js"
                         }
                     })

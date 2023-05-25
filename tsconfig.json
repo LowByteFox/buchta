@@ -1,6 +1,7 @@
 {
     "compilerOptions": {
         "lib": [
+            "DOM",
             "ESNext"
         ],
         "module": "esnext",
@@ -15,6 +16,7 @@
         "allowJs": true,
         "types": [
             "bun-types" // add Bun global
-        ]
+        ],
+        "allowImportingTsExtensions": true
     }
 }

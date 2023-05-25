@@ -1,22 +1,21 @@
-export type handler = (route: string, path: string, ...args: any[]) => string;
-export type ssrPageBuildFunction = (originalRoute: string, route: string, csrHtml: string, modFile: string) => Promise<string>;
+export type PageHandlerFunc = (route: string, path: string, ...args: any[]) => string;
+export type SSRPageHandlerFunc = (originalRoute: string, route: string, csrHtml: string, modFile: string) => Promise<string>;
 
 export class PageHandler {
-    private handlers: Map<string, handler> = new Map();
+    private handlers: Map<string, PageHandlerFunc> = new Map();
     private ssrCache: Map<string, string> = new Map();
-    private ssrHandler: Map<string, ssrPageBuildFunction> = new Map();
+    private ssrHandler: Map<string, SSRPageHandlerFunc> = new Map();
 
     callHandler(extension: string, route: string, path: string, ...args: any[]): string | null {
         const func = this.handlers.get(extension);
         if (!func) {
-            //throw new Error(`Page handler for extension "${extension}" doesn't exist!`);
             return null;
         }
 
         return func(route, path, ...args);
     }
 
-    assignHandler(extension: string, handler: handler) {
+    assignHandler(extension: string, handler: PageHandlerFunc) {
         this.handlers.set(extension, handler);
     }
 
@@ -28,7 +27,7 @@ export class PageHandler {
         this.ssrCache.set(route, code);
     }
 
-    assignSSRHandler(extension: string, handler: ssrPageBuildFunction) {
+    assignSSRHandler(extension: string, handler: SSRPageHandlerFunc) {
         this.ssrHandler.set(extension, handler);
     }
 

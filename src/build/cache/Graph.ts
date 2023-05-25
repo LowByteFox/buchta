@@ -55,7 +55,7 @@ export class Graph {
     private matrix: number[][];
     private files: CacheFile[];
     private indexes: Map<string, number> = new Map();
-    private depRegex = /.(?!['"])(\.\/|\/|\.\.\/).+?(?=['"])./g;
+    private depRegex = /.(?<=['"])(\.\/|\/|\.\.\/).+?(?=['"])./g;
 
     constructor(files: any[]) {
         this.matrix = [];
