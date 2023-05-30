@@ -1,6 +1,6 @@
 import { readFileSync } from "fs"
 import { basename } from "path"
-import { compileScript, parse } from "vue/compiler-sfc"
+import { compileScript, compileTemplate, parse, rewriteDefault } from "vue/compiler-sfc"
 
 const makeId = (length: number) => {
     let result = '';
@@ -32,12 +32,17 @@ export const compileVue = (
         filename: basename(path),
     });
 
+    let id = "v" + makeId(5);
+    let isProd = process.env.NODE_ENV == "development" ? false : true;
+
+    let code = "";
+
     if (parsed.descriptor.scriptSetup?.setup) {
-        // vue 3
-        let { content: code } = compileScript(parsed.descriptor, {
-            id: "v" + makeId(7),
+        // vue setup
+        let { content: code2 } = compileScript(parsed.descriptor, {
+            id,
             inlineTemplate: true, // SSR friendly
-            isProd: false, // TODO missing check
+            isProd, 
             templateOptions: {
                 filename: basename(path),
                 ssr: currentlySSR,
@@ -45,37 +50,63 @@ export const compileVue = (
             }
         });
 
-        code = code.replace("export default ", "let sfc = ");
+        code = code2.replace("export default ", "let sfc = ");
         code += ";\n";
 
-        const codeImports = imports.join("\n");
-        let plugins = "";
-        let components = "";
+    } else {
+        // vue without setup
 
-        for (const [name, config] of clientPlugins) {
-            plugins += `a.use(${name}, ${config});\n`;
-        }
+        let template = compileTemplate({
+            isProd,
+            ssr: currentlySSR,
+            id,
+            filename: basename(path),
+            ssrCssVars: [],
+            source: parsed.descriptor.template?.content ?? "",
+            scoped: true
+        })
 
-        for (const [name, comp] of clientComponents) {
-            components += `a.component("${name}", ${comp});`;
-        }
+        let script = compileScript(parsed.descriptor, {
+            id
+        })
 
-        if (path.endsWith("index.vue")) {
-            if (currentlySSR) {
-                code += "export default sfc;"
-                return tsToJs(code);
-            }
+        code = rewriteDefault(script.content, "sfc");
+        code += template.code.replace("export function", "function");
 
-            if (!ssrEnabled) {
-                code = `import { createApp } from "vue";\n${codeImports}${code}\nconst a = createApp(sfc);\n${components}${plugins}a.mount("#__buchta");`
-                return tsToJs(code);
-            } else {
-                code = `import { createSSRApp } from "vue";\n${codeImports}${code}\nconst a = createSSRApp(sfc);\n${components}${plugins}a.mount("#__buchta");`;
-                return tsToJs(code);
-            }
+        if (currentlySSR) {
+            code += "\nsfc.ssrRender = ssrRender;\n";
         } else {
-            code += "export default sfc;";
+            code += "\nsfc.render = render;\n";
+        }
+    }
+
+    const codeImports = imports.join("\n");
+    let plugins = "";
+    let components = "";
+
+    for (const [name, config] of clientPlugins) {
+        plugins += `a.use(${name}, ${config});\n`;
+    }
+
+    for (const [name, comp] of clientComponents) {
+        components += `a.component("${name}", ${comp});`;
+    }
+
+    if (path.endsWith("index.vue")) {
+        if (currentlySSR) {
+            code += "export default sfc;"
             return tsToJs(code);
         }
+
+        if (!ssrEnabled) {
+            code = `import { createApp } from "vue";\n${codeImports}${code}\nconst a = createApp(sfc);\n${components}${plugins}a.mount("#__buchta");`
+            return tsToJs(code);
+        } else {
+            code = `import { createSSRApp } from "vue";\n${codeImports}${code}\nconst a = createSSRApp(sfc);\n${components}${plugins}a.mount("#__buchta");`;
+            return tsToJs(code);
+        }
+    } else {
+        code += "export default sfc;";
+        return tsToJs(code);
     }
 }

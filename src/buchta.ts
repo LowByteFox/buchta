@@ -182,6 +182,8 @@ export class Buchta extends EventManager {
     }
 }
 
+process.env.NODE_ENV = "development"
+
 const a = new Buchta();
 a.earlyHook = earlyHook;
 await a.setup();
