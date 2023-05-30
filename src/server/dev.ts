@@ -6,25 +6,6 @@ import { basename, dirname } from "node:path";
 
 const extraRoutes: Map<string, any> = new Map();
 
-const nameGen = (length: number) => {
-    let result = '';
-    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    const charactersLength = characters.length;
-    let counter = 0;
-    while (counter < length) {
-      result += characters.charAt(Math.floor(Math.random() * charactersLength));
-      counter += 1;
-    }
-    return result;
-}
-
-const renameFile = (path: string, toAdd: string) => {
-    const split = path.split(".");
-    const ext = split.pop();
-    // @ts-ignore only files will go
-    return `${split.join(".")}-${toAdd}.${ext}`
-}
-
 export const earlyHook = (build: Buchta) => {
     build.on("fileLoad", (data) => {
         data.route = "/" + basename(data.path);

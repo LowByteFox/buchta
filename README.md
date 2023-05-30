@@ -17,10 +17,8 @@ bun install
 - [x] Bun's new bundler compatibility
 - [x] Connect build output with router
 - [x] Create logger
-- [x] Type Generation
 - [x] Better plugins
 - [x] Decrease size of plugins
-- [x] tsconfig.json generation
 - [x] Custom Configurable Bundle Tools
 - [ ] Globals ( composables )
 - [ ] Static files
@@ -28,8 +26,8 @@ bun install
 - [ ] minifing
 - [ ] building
 - [ ] building with --live ( run server and build from SSR cache as well )
-- [ ] React plugin
-- [ ] Vue.js plugin
-- [ ] node_modules custom components support
+- [x] React plugin
+- [x] Vue.js plugin
+- [x] node_modules custom components support
 - [x] Elysia supercharger plugin
-- [ ] Rewrite API
+- [x] Rewrite API
