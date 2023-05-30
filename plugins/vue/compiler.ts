@@ -1,6 +1,6 @@
 import { readFileSync } from "fs"
 import { basename } from "path"
-import { compileScript, compileTemplate, parse, rewriteDefault } from "vue/compiler-sfc"
+import { compileScript, compileStyle, compileTemplate, parse, rewriteDefault } from "vue/compiler-sfc"
 
 const makeId = (length: number) => {
     let result = '';
@@ -19,6 +19,8 @@ const tsToJs = (code: string) => {
     return transpiler.transformSync(code, {});
 }
 
+const idStore = new Map<string, string>();
+
 export const compileVue = (
     path: string,
     ssrEnabled: boolean,
@@ -32,10 +34,14 @@ export const compileVue = (
         filename: basename(path),
     });
 
-    let id = "v" + makeId(5);
+    let id = idStore.get(path) ?? "v" + makeId(5);
+    idStore.set(path, id);
+
     let isProd = process.env.NODE_ENV == "development" ? false : true;
 
     let code = "";
+
+    let styles = [];
 
     if (parsed.descriptor.scriptSetup?.setup) {
         // vue setup
@@ -79,6 +85,23 @@ export const compileVue = (
             code += "\nsfc.render = render;\n";
         }
     }
+
+    for (const i in parsed.descriptor.styles) {
+        styles.push(compileStyle({
+            id,
+            source: parsed.descriptor.styles[i].content,
+            filename: basename(path),
+            isProd,
+            scoped: parsed.descriptor.styles[i].scoped
+        }).code);
+    }
+
+    if (styles.length > 0) {
+        if (!currentlySSR) {
+            code += `const style = document.createElement("style");\nstyle.innerHTML = \`${styles.join("\n")}\`;\ndocument.head.appendChild(style);\n`;
+        }
+    }
+
 
     const codeImports = imports.join("\n");
     let plugins = "";
