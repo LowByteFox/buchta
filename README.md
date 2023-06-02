@@ -12,5 +12,7 @@ bun install
 ```
 
 > ### Notice
-> Buchta 0.5.99 is still in beta state, features will be buggy
+> Buchta 0.5.99 is still in beta state, features will be buggy <br>
 > But it is stable enough to build frontend part and be integrated
+
+### For more info, look [here](https://github.com/users/Fire-The-Fox/projects/5)

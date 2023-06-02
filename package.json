@@ -10,9 +10,6 @@
   "devDependencies": {
     "bun-types": "^0.6.2"
   },
-  "bin": {
-    "buchta": "bin/buchta.ts"
-  },
   "contributors": [
     "Ján Gajdoš <gajdos.jan77@gmail.com>"
   ],
@@ -26,34 +23,9 @@
     "svelte",
     "react",
     "vue",
-    "build-tools",
+    "build-tool",
     "ssr"
   ],
   "license": "ISC",
-  "scripts": {
-    "buchta": "bun src/buchta.ts"
-  },
-  "dependencies": {
-    "@elysiajs/cors": "^0.3.0",
-    "@elysiajs/eden": "^0.4.1",
-    "@fortawesome/free-brands-svg-icons": "^6.4.0",
-    "@fortawesome/free-regular-svg-icons": "^6.4.0",
-    "@fortawesome/free-solid-svg-icons": "^6.4.0",
-    "@fortawesome/vue-fontawesome": "^3.0.3",
-    "@smui/button": "^7.0.0-beta.3",
-    "@types/react": "^18.2.0",
-    "@types/react-dom": "^18.2.1",
-    "elysia": "^0.4.8",
-    "framer-motion": "^10.12.4",
-    "marked": "^4.3.0",
-    "pinia-plugin-persistedstate": "^3.1.0",
-    "primevue": "^3.27.0",
-    "quill": "^1.3.7",
-    "react": "^18.2.0",
-    "react-dom": "latest",
-    "svelte": "latest",
-    "svelte-awesome-color-picker": "^2.4.1",
-    "svelte-material-ui": "^7.0.0-beta.3",
-    "vue": "^3.2.47"
-  }
+  "dependencies": {}
 }
