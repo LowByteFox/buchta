@@ -72,6 +72,7 @@ export class Buchta extends EventManager {
             } catch (e: any) {
                 this.logger.error("Failed to load the config: ");
                 console.log(e);
+                process.exit(1);
             }
         } else {
             this.config = config;
@@ -187,9 +188,11 @@ export class Buchta extends EventManager {
     }
 }
 
+/*
 process.env.NODE_ENV = "development"
 
 const a = new Buchta();
 a.earlyHook = earlyHook;
 await a.setup();
 a.dev();
+*/

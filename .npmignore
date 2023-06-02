@@ -12,3 +12,4 @@ buchta_old.png
 dist/
 .github/
 .dccache
+buchta-vue.config.ts

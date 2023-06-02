@@ -17,8 +17,8 @@ export class Bundler {
 
         if (logs.length == 0)
             return outs;
-        else
-            console.log(logs.join("\n"));
+        else 
+            throw new Error(logs.join("\n"));
         return [];
     }
 }

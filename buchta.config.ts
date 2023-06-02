@@ -5,7 +5,6 @@ import { vue } from "./plugins/vue";
 import { react } from "./plugins/react";
 import { svelte } from "./plugins/svelte";
 import { BuchtaConfig } from "./src/buchta";
-import { testBundle } from "./testBundle";
 
 require("./buchta-vue.config.ts");
 
@@ -14,5 +13,5 @@ export default {
 
     port: 3000,
     ssr: true,
-    plugins: [customBundle(), testBundle(), svelte(), css(), vue(), react({ tsx: true })],
+    plugins: [customBundle(), svelte(), css(), vue(), react({ tsx: true })],
 } as BuchtaConfig;
