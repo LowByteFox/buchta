@@ -30,6 +30,8 @@ export function svelte(): BuchtaPlugin {
 
         let code = js.code;
 
+        code = code.replace(/\tmap:.+/, "");
+
         if (route.endsWith("index.svelte")) {
             if (currentlySSR) return code;
             if (isSSREnabled)

@@ -33,7 +33,7 @@ export const App = {
     }
 }
 
-export default function vue(): BuchtaPlugin {
+export function vue(): BuchtaPlugin {
 
     async function vueTranspile(_: string, path: string, ssrEnabled: boolean, currentlySSR: boolean) {
         return compileVue(path, ssrEnabled, currentlySSR, App.clientImports, App.clientPlugins, App.clientComponents) ?? "";

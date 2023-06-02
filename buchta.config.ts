@@ -1,10 +1,11 @@
 import { css } from "./plugins/css";
+import customBundle from "./plugins/customBundle";
+import { vue } from "./plugins/vue";
 // disabled just in case
 import { react } from "./plugins/react";
 import { svelte } from "./plugins/svelte";
 import { BuchtaConfig } from "./src/buchta";
-
-const vue = require("./plugins/vue/").default;
+import { testBundle } from "./testBundle";
 
 require("./buchta-vue.config.ts");
 
@@ -13,5 +14,5 @@ export default {
 
     port: 3000,
     ssr: true,
-    plugins: [svelte(), css(), vue(), react({ tsx: true })],
+    plugins: [customBundle(), testBundle(), svelte(), css(), vue(), react({ tsx: true })],
 } as BuchtaConfig;

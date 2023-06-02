@@ -98,10 +98,9 @@ export const compileVue = (
 
     if (styles.length > 0) {
         if (!currentlySSR) {
-            code += `const style = document.createElement("style");\nstyle.innerHTML = \`${styles.join("\n")}\`;\ndocument.head.appendChild(style);\n`;
+            code += `const style${id} = document.createElement("style");\nstyle${id}.innerHTML = \`${styles.join("\n")}\`;\ndocument.head.appendChild(style${id});\n`;
         }
     }
-
 
     const codeImports = imports.join("\n");
     let plugins = "";

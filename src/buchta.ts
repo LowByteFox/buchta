@@ -25,6 +25,7 @@ export interface BuchtaConfig {
 }
 
 export class Buchta extends EventManager {
+    [key: string]: any;
     // private for the functionality -> may have API
     private builder: Mediator;
     private pluginManager = new PluginManager(this);
@@ -52,6 +53,10 @@ export class Buchta extends EventManager {
     }
     setBundlerPlugin(plug: BunPlugin) {
         this.pluginManager.setBundlerPlugin(plug);
+    }
+
+    builderOn(event: string, handler: (...args: any[]) => void) {
+        this.builder.on(event, handler);
     }
 
     constructor(quiet = false, config?: BuchtaConfig) {

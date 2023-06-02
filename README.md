@@ -21,8 +21,8 @@ bun install
 - [x] Decrease size of plugins
 - [x] Custom Configurable Bundle Tools
 - [ ] Globals ( composables )
-- [ ] Static files
-- [ ] CSS bundling
+- [x] Static files
+- [x] CSS bundling
 - [ ] minifing
 - [ ] building
 - [ ] building with --live ( run server and build from SSR cache as well )
