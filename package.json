@@ -26,6 +26,6 @@
     "build-tool",
     "ssr"
   ],
-  "license": "ISC",
+  "license": "BSD-2-Clause",
   "dependencies": {}
 }
