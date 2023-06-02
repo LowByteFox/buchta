@@ -1,7 +1,7 @@
 # Buchta
 ## Bun-First integrable build tool for frontend
 
-<img src="./buchta.png" alt="Buchta Logo" width="512"/>
+<img src="https://github.com/Fire-The-Fox/buchta/blob/master/buchta.png" alt="Buchta Logo" width="512"/>
 
 ## Get Started
 
