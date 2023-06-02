@@ -6,7 +6,7 @@
 ## Get Started
 
 ```
-bunx buchta init <project-name>
+bunx buchta init <project-name> # Doesn't work currently, missing executable
 cd <project-name>
 bun install
 ```
