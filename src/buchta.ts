@@ -109,30 +109,20 @@ export class Buchta extends EventManager {
             name: "other files plugin",
             setup: (build) => {
                 // @ts-ignore sush
-                build.onLoad({ filter: /.+/ }, ({ path }) => {
-                    let ext: RegExpMatchArray | string | null = path.match(/\.(js|mjs|cjs|ts|mts|cts|jsx|tsx|txt|json|toml|wasm)$/g);
-                    if (!ext) {
-                        let data = {
-                            path,
-                            route: ""
-                        }
-
-                        if (!this.fileCache.has(path)) {
-                            this.emit("fileLoad", data);
-                            this.fileCache.set(path, data.route);
-                        } else data.route = this.fileCache.get(path) ?? "";
-
-                        return {
-                            contents: `export default "${data.route}"`,
-                            loader: "js"
-                        }
+                build.onLoad({ filter: /.*(?<!\.(js|mjs|cjs|ts|mts|cts|jsx|tsx|txt|json|toml|wasm)$)$/ }, ({ path }) => {
+                    let data = {
+                        path,
+                        route: ""
                     }
-                    ext = ext![0].split(".").pop() ?? "";
-                    if (ext == "mjs" || ext == "cjs") ext = "js";
-                    if (ext == "mts" || ext == "cts") ext = "ts";
+
+                    if (!this.fileCache.has(path)) {
+                        this.emit("fileLoad", data);
+                        this.fileCache.set(path, data.route);
+                    } else data.route = this.fileCache.get(path) ?? "";
+
                     return {
-                        contents: readFileSync(path, {encoding: "utf-8"}),
-                        loader: ext ?? "js"
+                        contents: `export default "${data.route}"`,
+                        loader: "js"
                     }
                 })
             },
@@ -144,7 +134,7 @@ export class Buchta extends EventManager {
 
         this.logger.success("Plugins loaded");
         this.logger.info("Starting up the build system");
-        this.builder.prepare();
+        this.builder.prepare(this.config?.dirs ?? ['public']);
         this.logger.info("Transpiling");
         try {
             await this.builder.transpileEverything();
