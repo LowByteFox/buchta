@@ -3,6 +3,6 @@
 
 ![Farewell](./buchta_bg.png)
 
-> Note
-> You can still use buchta if you have interest in using it
+> Note <br>
+> You can still use buchta if you have interest in using it <br>
 > Feel free to fork it and improve it if you'd like
