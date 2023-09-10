@@ -1,6 +1,6 @@
 {
   "name": "buchta",
-  "version": "0.5.99",
+  "version": "0.5.100",
   "repository": {
     "type": "git",
     "url": "https://github.com/Fire-The-Fox/buchta.git"
@@ -26,6 +26,6 @@
     "build-tool",
     "ssr"
   ],
-  "license": "ISC",
+  "license": "BSD-2-Clause",
   "dependencies": {}
 }
