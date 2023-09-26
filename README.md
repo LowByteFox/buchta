@@ -1,3 +1,2 @@
-# Buchta [reboot]
-## Bun-First integrable build tool for frontend
-
+# Buchta
+## Svelte Full-Stack framework based on the Islands architecture
